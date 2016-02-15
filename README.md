@@ -1,0 +1,2 @@
+# spoppy
+Spotify CLI
