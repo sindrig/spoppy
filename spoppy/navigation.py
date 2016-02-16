@@ -5,6 +5,7 @@ import click
 
 from . import menus
 from .lifecycle import LifeCycle
+from .players import Player
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class Leifur(object):
         self.username = username
         self.password = password
         self.lifecycle = LifeCycle(username, password)
+        self.player = Player(self)
         logger.debug('Leifur initialized')
 
     def start(self):
@@ -23,7 +25,7 @@ class Leifur(object):
         # )
         if self.lifecycle.check_pyspotify_logged_in():
             # self.info = self.lifecycle.get_spotipy_client()
-            self.player = self.lifecycle.get_pyspotify_client()
+            self.session = self.lifecycle.get_pyspotify_client()
             logger.debug('All tokens are a-OK')
             main_menu = menus.MainMenu(self)
             while True:
@@ -32,6 +34,8 @@ class Leifur(object):
             logger.debug('Something went wrong, not logged in...')
 
     def navigate_to(self, going):
+        if callable(going):
+            return self.navigate_to(going())
         going.initialize()
         while True:
             click.clear()

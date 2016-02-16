@@ -1,7 +1,5 @@
 import logging
 
-from . import players
-
 logger = logging.getLogger(__name__)
 
 UP = 1
@@ -89,7 +87,7 @@ class PlayListOverview(Menu):
 
     def get_options(self):
         results = {}
-        playlists = self.navigator.player.session.playlist_container
+        playlists = self.navigator.session.playlist_container
         playlists = enumerate(
             sorted(
                 (
@@ -116,9 +114,18 @@ class PlayListSelected(Menu):
     playlist_name = None
     playlist_link = None
 
+    def shuffle_play(self):
+        self.navigator.player.play_playlist(
+            self.playlist_link.as_playlist(),
+            shuffle=True
+        )
+        # TODO: Have player return from the play function and maintain same
+        # functionality as the menus.
+        return self.navigator.player
+
     def get_options(self):
         results = {}
-        results['sp'] = ('Shuffle play', None)
+        results['sp'] = ('Shuffle play', self.shuffle_play)
         return results
 
     def get_header(self):

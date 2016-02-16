@@ -28,7 +28,7 @@ class LifeCycle(object):
     #     return Spotify(auth=self._spotipy_token)
 
     def get_pyspotify_client(self):
-        return PySpotify(self._pyspotify_session)
+        return self._pyspotify_session
 
     # def _check_spotipy_logged_in(self):
     #     client_id = os.getenv('SPOTIPY_CLIENT_ID')
@@ -139,8 +139,3 @@ class LifeCycle(object):
         logged_in.wait()
         logger.debug('PySpotify logged in!')
         return True
-
-
-class PySpotify(object):
-    def __init__(self, session):
-        self.session = session
