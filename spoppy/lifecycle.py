@@ -137,7 +137,7 @@ class LifeCycle(object):
         logger.debug('Actually logging in now...')
         self._pyspotify_session.login(self.username, self.password)
 
-        logged_in.wait(10)
+        logged_in.wait(6)
         if logged_in.is_set():
             logger.debug('PySpotify logged in!')
             return True
