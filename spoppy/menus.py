@@ -198,11 +198,14 @@ class PlayListSelected(Menu):
 
     def get_options(self):
         results = {}
-        results['sp'] = ('Shuffle play', self.shuffle_play)
         for i, track in enumerate(self.playlist.tracks):
             results[str(i+1).rjust(4)] = (
                 format_track(track), self.select_song(i)
             )
+        if results:
+            results['sp'] = ('Shuffle play', self.shuffle_play)
+        else:
+            logger.debug('There are no songs in this playlist!')
 
         return results
 
