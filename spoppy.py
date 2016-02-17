@@ -30,14 +30,12 @@ def main(username, password, debug):
         finally:
             navigator.shutdown()
             logger.debug('Finally, bye!')
-            logging.shutdown()
     else:
         try:
             navigator.start()
         finally:
             navigator.shutdown()
             logger.debug('Finally, bye!')
-            logging.shutdown()
 
 
 if __name__ == '__main__':
