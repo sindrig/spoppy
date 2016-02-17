@@ -108,13 +108,6 @@ class Menu(object):
                 return is_valid
         # Trigger redraw!
         return NOOP
-        # response = None
-        # while not response:
-        #     # response = self.is_valid_response(input('>>> '))
-        #     # if response == 'u' and not self.INCLUDE_UP_ITEM:
-        #         # response = None
-        # logger.debug('Got response %s' % response)
-        # return response
 
     def is_valid_response(self, response):
         return (
