@@ -4,7 +4,7 @@ Spotify CLI
 # Requirements
 
 See requirements.txt
-You will need libspotify installed. Use your distribution's package manager.
+You will need libspotify, libffi-dev and libasound2-dev installed. Use your distribution's package manager.
 You will need a Spotify Premium account.
 
 # Development

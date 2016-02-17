@@ -6,7 +6,7 @@ import time
 
 import spotify
 
-from .responses import NOOP, QUIT, UP
+from .responses import NOOP, UP
 from .util import single_char_with_timeout, format_track
 
 logger = logging.getLogger(__name__)
@@ -24,12 +24,11 @@ class Player(object):
         self.clear()
         self.actions = {
             b'n': self.next_song,
-            b'\xc3': self.next_song,
+            b'\xc3\xa6': self.next_song,
             b'p': self.previous_song,
             b'j': self.previous_song,
             b' ': self.play_pause,
             b'u': UP,
-            b'q': QUIT,
             b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,
@@ -38,7 +37,6 @@ class Player(object):
             b'h': self.get_help,
         }
         key_names = {
-            b'\xc3': 'æ',
             b' ': 'space'
         }
         self.reversed_actions = defaultdict(list)
