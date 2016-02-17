@@ -17,6 +17,7 @@ class Leifur(object):
         self.password = password
         self.lifecycle = LifeCycle(username, password)
         self.player = Player(self)
+        self.session = None
         logger.debug('Leifur initialized')
 
     def start(self):
@@ -32,11 +33,16 @@ class Leifur(object):
             while True:
                 self.navigate_to(main_menu)
         else:
+            click.echo(
+                'Could not log you in, please check your username (%s) '
+                'and password are correct' % self.username
+            )
             logger.debug('Something went wrong, not logged in...')
 
     def shutdown(self):
-        logger.debug('Logging user out after quit...')
-        self.session.logout()
+        if self.session:
+            logger.debug('Logging user out after quit...')
+            self.session.logout()
 
     def navigate_to(self, going):
         logger.debug('navigating to: %s' % going)

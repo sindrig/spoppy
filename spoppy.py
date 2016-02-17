@@ -1,8 +1,9 @@
-import click
+import logging
+import traceback
 
+import click
 from spoppy.navigation import Leifur
 
-import logging
 logger = logging.getLogger('spoppy')
 logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler('spoppy.log')
@@ -17,13 +18,24 @@ logger.debug('Logger set up')
 @click.command()
 @click.argument('username', envvar='SPOPPY_USERNAME')
 @click.argument('password', envvar='SPOPPY_PASSWORD')
-def main(username, password):
+@click.option('--debug', default=False)
+def main(username, password, debug):
     navigator = Leifur(username, password)
-    try:
-        navigator.start()
-    finally:
-        navigator.shutdown()
-        logger.debug('Bye')
+    if debug:
+        try:
+            navigator.start()
+        except Exception:
+            traceback.print_exc()
+            logger.error(traceback.format_exc())
+        finally:
+            navigator.shutdown()
+            logger.debug('Bye')
+    else:
+        try:
+            navigator.start()
+        finally:
+            navigator.shutdown()
+            logger.debug('Bye')
 
 
 if __name__ == '__main__':
