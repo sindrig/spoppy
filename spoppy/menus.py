@@ -74,7 +74,6 @@ class Menu(object):
 
     def __init__(self, navigator):
         self.navigator = navigator
-        self.child = None
 
     def initialize(self):
         self._options = Options(self.get_options())
