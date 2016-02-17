@@ -46,6 +46,7 @@ def format_track(track):
         track.name,
         ' & '.join(
             artist.name for artist in track.artists
+            if artist.name
         )
     )
 
