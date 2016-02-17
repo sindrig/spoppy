@@ -73,9 +73,9 @@ class Player(object):
 
     def get_ui(self):
         res = []
-        res.append((
-            'Press h for help'
-        ))
+        res.append('Press h for help')
+        if self.playlist:
+            res.append('Playing playlist: %s' % self.playlist.name)
         if self.current_track:
             res.append(
                 (
@@ -92,6 +92,8 @@ class Player(object):
             )
             previous_track = self.get_track_by_idx(self.get_prev_idx())
             res.append('Previous song: %s' % format_track(previous_track))
+        else:
+            res.append('No songs found in playlist!')
         if self.show_help:
             res.append('')
             for action, hotkeys in sorted(self.reversed_actions.items()):
@@ -160,8 +162,11 @@ class Player(object):
         return NOOP
 
     def get_track_by_idx(self, idx):
-        song_index = self.song_order[idx]
-        return self.song_list[song_index]
+        try:
+            song_index = self.song_order[idx]
+            return self.song_list[song_index]
+        except IndexError:
+            return None
 
     def load_playlist(self, playlist, shuffle=None):
         self.clear()
@@ -199,6 +204,9 @@ class Player(object):
         self.end_of_track = threading.Event()
 
         current_track = self.get_track_by_idx(self.current_track_idx)
+        if not current_track:
+            self.current_track = None
+            return
         self.current_track = current_track.load()
 
         self.current_track_duration = self.get_duration_from_s(
@@ -229,7 +237,8 @@ class Player(object):
                     return NOOP
                 elif self.repeat == 'one':
                     self.play_current_song()
-            self.navigator.update_progress(*self.get_progress())
+            if self.current_track:
+                self.navigator.update_progress(*self.get_progress())
             char = single_char_with_timeout(timeout=1.5)
             if char:
                 logger.debug('Got some char: %s' % char)
