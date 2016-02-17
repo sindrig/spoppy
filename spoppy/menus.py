@@ -1,6 +1,6 @@
 import logging
 
-from .responses import UP, QUIT, NOOP
+from . import responses
 from .util import format_track, single_char_with_timeout
 
 logger = logging.getLogger(__name__)
@@ -68,22 +68,21 @@ class Options(dict):
 
 
 class Menu(object):
-    GLOBAL_OPTIONS = {
-        'u': ('..', UP),
-        'q': ('quit', QUIT)
-    }
     INCLUDE_UP_ITEM = True
 
     BACKSPACE = b'\x7f'
 
     def __init__(self, navigator):
         self.navigator = navigator
+        self.child = None
 
     def initialize(self):
         self._options = Options(self.get_options())
-        for key, value in self.GLOBAL_OPTIONS.items():
-            if self.INCLUDE_UP_ITEM or key != 'u':
-                self._options[key] = value
+        self._options['q'] = ('quit', responses.QUIT)
+        if self.INCLUDE_UP_ITEM:
+            self._options['u'] = ('..', responses.UP)
+        if self.navigator.player.has_been_loaded():
+            self._options['p'] = ('player', responses.PLAYER)
         self.filter = ''
 
     def get_response(self):
@@ -92,7 +91,7 @@ class Menu(object):
             response = single_char_with_timeout(60)
         if response == Menu.BACKSPACE:
             self.filter = self.filter[:-1]
-            return NOOP
+            return responses.NOOP
         self.filter += response.decode('utf-8')
         if self.filter.endswith('\n'):
             # The user wants to go someplace...
@@ -103,7 +102,7 @@ class Menu(object):
                 # Ok, return
                 return is_valid[1]
         # Trigger redraw!
-        return NOOP
+        return responses.NOOP
 
     def is_valid_response(self, response):
         return self._options.match_best_or_none(response)
@@ -151,7 +150,7 @@ class MainMenu(Menu):
 
     def get_options(self):
         return {
-            'p': ('View playlists', PlayListOverview(self.navigator))
+            'vp': ('View playlists', PlayListOverview(self.navigator))
         }
 
 

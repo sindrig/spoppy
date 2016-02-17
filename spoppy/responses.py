@@ -1,3 +1,4 @@
 UP = '..'
 QUIT = 'quit'
-NOOP = 3
+NOOP = '_noop'
+PLAYER = 'player'

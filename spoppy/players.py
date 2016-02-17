@@ -49,6 +49,9 @@ class Player(object):
                 key_names.get(key) or key.decode('utf-8')
             )
 
+    def has_been_loaded(self):
+        return bool(len(self.song_list))
+
     def debug(self):
         import pdb
         pdb.set_trace()
@@ -65,6 +68,8 @@ class Player(object):
         self.current_track_duration = ''
         self.repeat = self.REPEAT_OPTIONS[0]
         self.show_help = False
+        self.playlist = None
+        self.song_list = []
 
     def get_ui(self):
         res = []

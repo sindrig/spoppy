@@ -47,8 +47,6 @@ class Leifur(object):
     def navigate_to(self, going):
         logger.debug('navigating to: %s' % going)
         self.session.process_events()
-        if callable(going):
-            return self.navigate_to(going())
         going.initialize()
         while True:
             logger.debug('clearing screen...')
@@ -64,10 +62,18 @@ class Leifur(object):
             elif response == responses.UP:
                 break
             elif response == responses.NOOP:
-                pass
+                continue
+            elif response == responses.PLAYER:
+                self.navigate_to(self.player)
             else:
+                if callable(response):
+                    response = response()
                 self.navigate_to(response)
-                going.initialize()
+            # This happens when the `going` instance gets control again. We
+            # don't want to remember the query and we want to rebuild the
+            # menu's options
+            # (and possibly something else?)
+            going.initialize()
 
     def print_header(self):
         click.echo('Spoppy v. %s' % get_version())
