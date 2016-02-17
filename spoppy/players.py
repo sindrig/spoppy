@@ -132,8 +132,10 @@ class Player(object):
 
     def set_song_order_by_shuffle(self):
         self.song_order = list(range(len(self.song_list)))
+        logger.debug('Song order before: %s' % self.song_order)
         if self.shuffle:
             random.shuffle(self.song_order)
+        logger.debug('Song order after: %s' % self.song_order)
 
     def toggle_repeat(self):
         new_idx = self.REPEAT_OPTIONS.index(self.repeat) + 1
@@ -160,13 +162,9 @@ class Player(object):
         self.clear()
         self.song_list = playlist.tracks
         self.playlist = playlist
-        self.song_order = list(range(len(self.song_list)))
         if shuffle is not None:
             self.shuffle = shuffle
-        if self.shuffle:
-            logger.debug('Song order before: %s' % self.song_order)
-            self.set_song_order_by_shuffle()
-            logger.debug('Song order after: %s' % self.song_order)
+        self.set_song_order_by_shuffle()
 
     def play_track(self, track_idx):
         self.current_track_idx = self.song_order.index(track_idx)
