@@ -61,6 +61,7 @@ class Leifur(object):
                 pass
             else:
                 self.navigate_to(response)
+                going.initialize()
 
     def print_header(self):
         click.echo('Spoppy v. %s' % get_version())

@@ -15,9 +15,14 @@ logger = logging.getLogger(__name__)
 def readchar(wait_for_char=0.1):
     old_settings = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
+    res = b''
     try:
         if select.select([sys.stdin, ], [], [], wait_for_char)[0]:
-            return os.read(sys.stdin.fileno(), 1)
+            res = os.read(sys.stdin.fileno(), 1)
+        while select.select([sys.stdin, ], [], [], 0.0)[0]:
+            res += os.read(sys.stdin.fileno(), 1)
+        if res:
+            return res
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
     return None
@@ -43,3 +48,8 @@ def format_track(track):
             artist.name for artist in track.artists
         )
     )
+
+if __name__ == '__main__':
+    char = readchar(10)
+    print(char)
+    print(char.decode('utf-8'))

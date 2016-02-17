@@ -24,7 +24,7 @@ class Player(object):
         self.clear()
         self.actions = {
             b'n': self.next_song,
-            b'\xc3': self.next_song,
+            b'\xc3\xa6': self.next_song,
             b'p': self.previous_song,
             b'j': self.previous_song,
             b' ': self.play_pause,
@@ -38,7 +38,6 @@ class Player(object):
             b'h': self.get_help,
         }
         key_names = {
-            b'\xc3': 'æ',
             b' ': 'space'
         }
         self.reversed_actions = defaultdict(list)
