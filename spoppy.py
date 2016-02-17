@@ -29,18 +29,14 @@ def main(username, password, debug):
             logger.error(traceback.format_exc())
         finally:
             navigator.shutdown()
-            logger.debug('Bye')
+            logger.debug('Finally, bye!')
     else:
         try:
             navigator.start()
         finally:
             navigator.shutdown()
-            logger.debug('Bye')
+            logger.debug('Finally, bye!')
 
 
 if __name__ == '__main__':
-    # click.clear()
-    try:
-        main(auto_envvar_prefix='SPOPPY')
-    finally:
-        pass  # click.clear()
+    main(auto_envvar_prefix='SPOPPY', standalone_mode=False)
