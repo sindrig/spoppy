@@ -1,5 +1,7 @@
 import logging
 
+from spotify import TrackAvailability
+
 from . import responses
 from .util import format_track, single_char_with_timeout
 
@@ -198,7 +200,11 @@ class PlayListSelected(Menu):
 
     def get_options(self):
         results = {}
-        for i, track in enumerate(self.playlist.tracks):
+        for i, track in enumerate(
+            track for track in
+            self.playlist.tracks
+            if track.availability != TrackAvailability.UNAVAILABLE
+        ):
             results[str(i+1).rjust(4)] = (
                 format_track(track), self.select_song(i)
             )

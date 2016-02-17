@@ -170,7 +170,11 @@ class Player(object):
 
     def load_playlist(self, playlist, shuffle=None):
         self.clear()
-        self.song_list = playlist.tracks
+        self.song_list = [
+            track for track in
+            playlist.tracks
+            if track != spotify.TrackAvailability.UNAVAILABLE
+        ]
         self.playlist = playlist
         if shuffle is not None:
             self.shuffle = shuffle
