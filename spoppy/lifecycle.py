@@ -1,8 +1,11 @@
 import logging
 import os
 import threading
+
 import spotify
 from appdirs import user_cache_dir
+
+from .dbus_listener import Listener
 
 logger = logging.getLogger(__name__)
 
@@ -11,12 +14,29 @@ class LifeCycle(object):
 
     user_cache_dir = user_cache_dir(appname='spoppy')
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, navigator):
         if not os.path.isdir(self.user_cache_dir):
             # TODO: Use this for pyspotify's cache
             os.makedirs(self.user_cache_dir)
+        self.navigator = navigator
         self.username = username
         self.password = password
+        self._pyspotify_session = None
+        self.dbus_stop_event = threading.Event()
+        self.dbus_listener = Listener(self, self.dbus_stop_event)
+
+    def start_lifecycle_services(self):
+        self.dbus_listener.start()
+
+    def shutdown(self):
+        if self._pyspotify_session:
+            logger.debug('Logging user out after quit...')
+            self._pyspotify_session.logout()
+        logger.debug('Closing dbus_listener')
+        self.dbus_stop_event.set()
+        while self.dbus_listener.is_alive():
+            logger.debug('Joining dbus_listener')
+            self.dbus_listener.join(0.5)
 
     def get_pyspotify_client(self):
         return self._pyspotify_session
