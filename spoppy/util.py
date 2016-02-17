@@ -50,6 +50,9 @@ def format_track(track):
     )
 
 if __name__ == '__main__':
-    char = readchar(10)
-    print(char)
-    print(char.decode('utf-8'))
+    if sys.argv[-1] == 'wrapper':
+        print(single_char_with_timeout())
+    else:
+        char = readchar(10)
+        print(char)
+        print(char.decode('utf-8'))

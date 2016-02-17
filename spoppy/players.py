@@ -6,7 +6,7 @@ import time
 
 import spotify
 
-from .responses import NOOP, QUIT, UP
+from .responses import NOOP, UP
 from .util import single_char_with_timeout, format_track
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,6 @@ class Player(object):
             b'j': self.previous_song,
             b' ': self.play_pause,
             b'u': UP,
-            b'q': QUIT,
             b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,

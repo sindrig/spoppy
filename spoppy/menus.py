@@ -10,41 +10,41 @@ class Options(dict):
     def __init__(self, *args, **kwargs):
         super(Options, self).__init__(*args, **kwargs)
         self._cached_matches = {}
+        self._stripped_keys_mapper = {
+            key.replace(' ', ''): key
+            for key in self
+        }
+
+    def __setitem__(self, key, value):
+        super(Options, self).__setitem__(key, value)
+        self._stripped_keys_mapper[key.replace(' ', '')] = key
 
     def get_possibilities(self, pattern):
         if pattern in self._cached_matches:
             logger.debug('Pattern %s found in cache' % pattern)
         else:
             logger.debug('Trying to match %s' % pattern)
-            exact_key = None
             possibilities_key = []
             possibilities_name = []
             pattern = pattern.lower()
-            if pattern in self:
-                exact_key = pattern
             for key, (name, destination) in self.items():
-                if pattern == key.lstrip(' '):
-                    exact_key = key
-                if key.startswith(pattern):
+                if key.lstrip(' ').startswith(pattern):
                     possibilities_key.append(key)
-                if pattern in name.lower():
+                if (
+                    # Only match start of words
+                    name.lower().startswith(pattern) or
+                    ' %s' % pattern in name.lower()
+                ):
                     possibilities_name.append(key)
             logger.debug('possibilities_key: %s' % possibilities_key)
             logger.debug('possibilities_name: %s' % possibilities_name)
             self._cached_matches[pattern] = (
-                exact_key, possibilities_key, possibilities_name
+                list(set(possibilities_key + possibilities_name))
             )
         return self._cached_matches[pattern]
 
     def filter(self, pattern):
-        exact_key, possibilities_key, possibilities_name = (
-            self.get_possibilities(pattern)
-        )
-        if exact_key:
-            # This really should not happen, as the user should have navigated
-            possibilities = [exact_key]
-        else:
-            possibilities = possibilities_key + possibilities_name
+        possibilities = self.get_possibilities(pattern)
 
         return Options({
             key: value
@@ -54,33 +54,24 @@ class Options(dict):
         })
 
     def match_best_or_none(self, pattern):
-        exact_key, possibilities_key, possibilities_name = (
-            self.get_possibilities(pattern)
-        )
-        if exact_key:
-            return self[exact_key][1]
-        if possibilities_key:
-            if len(possibilities_key) == 1:
-                return self[possibilities_key[0]][1]
-        elif possibilities_name:
-            if len(possibilities_name) == 1:
-                value = self[possibilities_name[0]]
-                namematcher = value[0].lower().center(len(value[0]) + 2)
-                if (
-                    # Only want to match whole words longer than 2 chars
-                    len(pattern) > 2 and (
-                        '%s ' % pattern in namematcher or
-                        ' %s' % pattern in namematcher
-                    )
-                ):
-                    return value[1]
+        logger.debug('Trying to match (%s)' % pattern)
+        possibilities = self.get_possibilities(pattern)
+        logger.debug('Available possibilities: %s' % possibilities)
+        if len(possibilities) == 1:
+            logger.debug('Exactly one possibility, returning that!')
+            return self[possibilities[0]]
+        if pattern in self._stripped_keys_mapper:
+            logger.debug('Pattern matches stripped key, returning key %s' % (
+                self._stripped_keys_mapper[pattern]
+            ))
+            return self[self._stripped_keys_mapper[pattern]]
 
 
 class Menu(object):
-    GLOBAL_OPTIONS = Options({
+    GLOBAL_OPTIONS = {
         'u': ('..', UP),
         'q': ('quit', QUIT)
-    })
+    }
     INCLUDE_UP_ITEM = True
 
     BACKSPACE = b'\x7f'
@@ -90,6 +81,9 @@ class Menu(object):
 
     def initialize(self):
         self._options = Options(self.get_options())
+        for key, value in self.GLOBAL_OPTIONS.items():
+            if self.INCLUDE_UP_ITEM or key != 'u':
+                self._options[key] = value
         self.filter = ''
 
     def get_response(self):
@@ -100,39 +94,49 @@ class Menu(object):
             self.filter = self.filter[:-1]
             return NOOP
         self.filter += response.decode('utf-8')
-        # Gets set as the item to navigate to if we only found one
-        is_valid = self.is_valid_response(self.filter)
-        if is_valid:
-            if self.INCLUDE_UP_ITEM or is_valid != UP:
+        if self.filter.endswith('\n'):
+            # The user wants to go someplace...
+            self.filter = self.filter.replace('\n', '')
+            # Gets set as the item to navigate to if we only found one
+            is_valid = self.is_valid_response(self.filter)
+            if is_valid:
                 # Ok, return
-                return is_valid
+                return is_valid[1]
         # Trigger redraw!
         return NOOP
 
     def is_valid_response(self, response):
-        return (
-            self.GLOBAL_OPTIONS.match_best_or_none(response) or
-            self._options.match_best_or_none(response)
-        )
+        return self._options.match_best_or_none(response)
 
     def get_ui(self):
         if self.filter:
-            items = (
-                sorted(self._options.filter(self.filter).items()) +
-                list(self.GLOBAL_OPTIONS.filter(self.filter).items())
-            )
+            items = sorted(self._options.filter(self.filter).items())
         else:
-            items = (
-                sorted(self._options.items()) +
-                list(self.GLOBAL_OPTIONS.items())
+            items = sorted(self._options.items())
+        if not items:
+            menu_items = ('No matches for "%s"' % self.filter, )
+        # elif len(items) == 1:
+        #     key, value = items[0]
+        #     menu_items = ('Press [return] to go to (%s)' % value[0], )
+        else:
+            menu_items = tuple(
+                self.get_menu_item(key, value[0]) for key, value in
+                items
             )
-        menu_items = tuple(
-            self.get_menu_item(key, value[0]) for key, value in
-            items
-            if self.INCLUDE_UP_ITEM or key != 'u'
-        )
+            if self.filter:
+                is_valid = self.is_valid_response(self.filter)
+                if is_valid:
+                    menu_items += (
+                        '',
+                        'Press [return] to go to (%s)' % is_valid[0]
+                    )
+
         above_menu_items = self.get_header()
-        return '\n'.join((above_menu_items, '') + menu_items + (self.filter, ))
+        return '\n'.join(
+            (above_menu_items, '') +
+            menu_items +
+            ('', 'Query: %s' % self.filter, )
+        )
 
     def get_menu_item(self, key, value):
         return '[%s]: %s' % (key, value)
