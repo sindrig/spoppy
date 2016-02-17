@@ -14,7 +14,7 @@ You will need a Spotify Premium account.
   * Download the Binary key file
 3. Create an ENV file containing these values:
   * export SPOPPY_USERNAME=your-username
-  * export SPOPPY_PASSWORD=hunter1
+  * export SPOPPY_PASSWORD=hunter2
   * export SPOPPY_LIBSPOTIFY_APP_KEY=/path/to/spotify_appkey.key
 4. Clone this project
 5. Activate your virtualenv
