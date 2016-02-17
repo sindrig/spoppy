@@ -21,12 +21,7 @@ class Leifur(object):
         logger.debug('Leifur initialized')
 
     def start(self):
-        # logged_in = (
-        #     self.lifecycle._check_spotipy_logged_in() and
-        #     self.lifecycle._check_pyspotify_logged_in()
-        # )
         if self.lifecycle.check_pyspotify_logged_in():
-            # self.info = self.lifecycle.get_spotipy_client()
             self.session = self.lifecycle.get_pyspotify_client()
             logger.debug('All tokens are a-OK')
             main_menu = menus.MainMenu(self)
