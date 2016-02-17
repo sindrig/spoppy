@@ -115,9 +115,6 @@ class Menu(object):
             items = sorted(self._options.items())
         if not items:
             menu_items = ('No matches for "%s"' % self.filter, )
-        # elif len(items) == 1:
-        #     key, value = items[0]
-        #     menu_items = ('Press [return] to go to (%s)' % value[0], )
         else:
             menu_items = tuple(
                 self.get_menu_item(key, value[0]) for key, value in
