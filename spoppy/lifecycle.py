@@ -102,6 +102,7 @@ class LifeCycle(object):
     #         return False
 
     def check_pyspotify_logged_in(self):
+        logger.debug('Checking if pyspotify is logged in...')
         config = spotify.Config()
         config.user_agent = 'Spoppy'
         application_key = os.getenv('SPOPPY_LIBSPOTIFY_APP_KEY')
@@ -133,9 +134,13 @@ class LifeCycle(object):
             on_connection_state_updated
         )
 
-        # Assuming a previous login with remember_me=True and a proper logout
+        logger.debug('Actually logging in now...')
         self._pyspotify_session.login(self.username, self.password)
 
-        logged_in.wait()
-        logger.debug('PySpotify logged in!')
-        return True
+        logged_in.wait(10)
+        if logged_in.is_set():
+            logger.debug('PySpotify logged in!')
+            return True
+        else:
+            logger.warning('PySpotify login failed!')
+            return False
