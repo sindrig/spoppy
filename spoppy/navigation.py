@@ -1,9 +1,10 @@
 import logging
+import shutil
 import sys
 
 import click
 
-from . import menus
+from . import get_version, menus, responses
 from .lifecycle import LifeCycle
 from .players import Player
 
@@ -33,25 +34,74 @@ class Leifur(object):
         else:
             logger.debug('Something went wrong, not logged in...')
 
+    def shutdown(self):
+        logger.debug('Logging user out after quit...')
+        self.session.logout()
+
     def navigate_to(self, going):
+        logger.debug('navigating to: %s' % going)
+        self.session.process_events()
         if callable(going):
             return self.navigate_to(going())
         going.initialize()
         while True:
+            logger.debug('clearing screen...')
             click.clear()
             self.print_header()
-            self.print_menu(going.get_menu())
+            self.print_menu(going.get_ui())
             response = going.get_response()
-            if response == menus.QUIT:
+            logger.debug('Got response %s' % response)
+            if response == responses.QUIT:
+                click.clear()
                 click.echo('Thanks, bye!')
                 sys.exit(0)
-            elif response == menus.UP:
+            elif response == responses.UP:
                 break
+            elif response == responses.NOOP:
+                pass
             else:
                 self.navigate_to(response)
 
     def print_header(self):
+        click.echo('Spoppy v. %s' % get_version())
         click.echo('Hi there %s' % self.username)
+        click.echo('')
 
     def print_menu(self, menu):
-        click.echo(menu)
+        if isinstance(menu, str):
+            click.echo(menu)
+        elif isinstance(menu, (list, tuple)):
+            for item in menu:
+                if isinstance(item, (list, tuple)):
+                    if len(item) == 2:
+                        click.echo(
+                            ''.join((
+                                item[0],
+                                ' ' * (
+                                    self.get_ui_width() -
+                                    len(item[0]) -
+                                    len(item[1])
+                                ),
+                                item[1]
+                            ))
+                        )
+                    else:
+                        click.echo(item[0])
+                else:
+                    click.echo(item)
+            click.echo('')
+
+    def update_progress(self, status, start, perc, end):
+        s = '\r[%s] %s[%s]%s' % (
+            status,
+            start,
+            '%s',
+            end or ''
+        )
+        progress_width = self.get_ui_width() - len(s) + 2
+        s = s % ('#'*int(perc*progress_width)).ljust(progress_width)
+
+        click.echo(s, nl=False)
+
+    def get_ui_width(self):
+        return shutil.get_terminal_size((120, 40)).columns

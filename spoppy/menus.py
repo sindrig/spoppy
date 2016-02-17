@@ -1,23 +1,28 @@
 import logging
 
-logger = logging.getLogger(__name__)
+from .responses import UP, QUIT
+from .util import format_track
 
-UP = 1
-QUIT = 2
+logger = logging.getLogger(__name__)
 
 
 class Options(dict):
     def match_best_or_none(self, pattern):
+        logger.debug('Trying to match %s' % pattern)
         pattern = pattern.lower()
         if pattern in self:
             return self[pattern][1]
         possibilities_key = []
         possibilities_name = []
         for key, (name, destination) in self.items():
+            if pattern == key.lstrip(' '):
+                return self[key][1]
             if key.startswith(pattern):
                 possibilities_key.append(key)
             if pattern in name.lower():
                 possibilities_name.append(key)
+        logger.debug('possibilities_key: %s' % possibilities_key)
+        logger.debug('possibilities_name: %s' % possibilities_name)
         if possibilities_key:
             if len(possibilities_key) == 1:
                 return self[possibilities_key[0]][1]
@@ -54,7 +59,7 @@ class Menu(object):
             self._options.match_best_or_none(response)
         )
 
-    def get_menu(self):
+    def get_ui(self):
         menu_items = tuple(
             self.get_menu_item(key, value[0]) for key, value in
             sorted(self._options.items()) + list(self.GLOBAL_OPTIONS.items())
@@ -99,11 +104,8 @@ class PlayListOverview(Menu):
         )
         for i, playlist in playlists:
             menu_item = PlayListSelected(self.navigator)
-            menu_item.playlist_link = playlist.link
-            menu_item.playlist_name = playlist.name
-            print(menu_item.playlist_name)
-            print(menu_item.playlist_link)
-            results[str(i+1)] = (menu_item.playlist_name, menu_item)
+            menu_item.playlist = playlist.link.as_playlist()
+            results[str(i+1).rjust(4)] = (menu_item.playlist.name, menu_item)
         return results
 
     def get_header(self):
@@ -111,22 +113,33 @@ class PlayListOverview(Menu):
 
 
 class PlayListSelected(Menu):
-    playlist_name = None
-    playlist_link = None
 
     def shuffle_play(self):
-        self.navigator.player.play_playlist(
-            self.playlist_link.as_playlist(),
+        self.navigator.player.load_playlist(
+            self.playlist,
             shuffle=True
         )
-        # TODO: Have player return from the play function and maintain same
-        # functionality as the menus.
+        self.navigator.player.play_current_song()
         return self.navigator.player
+
+    def select_song(self, track_idx):
+        def song_selected():
+            self.navigator.player.load_playlist(
+                self.playlist,
+            )
+            self.navigator.player.play_track(track_idx)
+            return self.navigator.player
+        return song_selected
 
     def get_options(self):
         results = {}
         results['sp'] = ('Shuffle play', self.shuffle_play)
+        for i, track in enumerate(self.playlist.tracks):
+            results[str(i+1).rjust(4)] = (
+                format_track(track), self.select_song(i)
+            )
+
         return results
 
     def get_header(self):
-        return 'Playlist [%s] selected' % self.playlist_name
+        return 'Playlist [%s] selected' % self.playlist.name
