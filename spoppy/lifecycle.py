@@ -6,7 +6,7 @@ import threading
 
 # import click
 import spotify
-from appdirs import user_data_dir
+# from appdirs import user_data_dir
 # from spotipy import Spotify, SpotifyException, oauth2
 
 # from .oauth_receiver import run as run_oauth_server
@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 class LifeCycle(object):
 
-    user_data_dir = user_data_dir(appname='spoppy')
+    # user_data_dir = user_data_dir(appname='spoppy')
 
     def __init__(self, username, password):
-        if not os.path.isdir(self.user_data_dir):
-            os.makedirs(self.user_data_dir)
+        # if not os.path.isdir(self.user_data_dir):
+        #     os.makedirs(self.user_data_dir)
         self.username = username
         self.password = password
 
