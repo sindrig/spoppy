@@ -56,14 +56,9 @@ class LifeCycle(object):
         logger.debug('Checking if pyspotify is logged in...')
         config = spotify.Config()
         config.user_agent = 'Spoppy'
-        application_key = os.getenv('SPOPPY_LIBSPOTIFY_APP_KEY')
-        if not os.path.isfile(application_key):
-            raise ValueError(
-                'SPOPPY_LIBSPOTIFY_APP_KEY env variable must be set '
-                'for PySpotify to work'
-            )
-        with open(application_key, 'rb') as f:
-            config.application_key = f.read()
+        config.load_application_key_file(
+            os.path.join(os.path.dirname(__file__), 'spotify_appkey.key')
+        )
         self._pyspotify_session = spotify.Session(config)
         loop = spotify.EventLoop(self._pyspotify_session)
         loop.start()
