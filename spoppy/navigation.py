@@ -1,5 +1,4 @@
 import logging
-import shutil
 import sys
 
 import click
@@ -7,6 +6,7 @@ import click
 from . import get_version, menus, responses
 from .lifecycle import LifeCycle
 from .players import Player
+from .terminal import get_terminal_size
 
 logger = logging.getLogger(__name__)
 
@@ -113,4 +113,4 @@ class Leifur(object):
         click.echo(s, nl=False)
 
     def get_ui_width(self):
-        return shutil.get_terminal_size((120, 40)).columns
+        return get_terminal_size().width 
