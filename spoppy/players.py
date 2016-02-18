@@ -164,6 +164,12 @@ class Player(object):
     def is_playing(self):
         return self.player.state == 'playing'
 
+    def add_to_queue(self, track):
+        # Add the newest track_idx to the song order
+        self.song_order.append(len(self.song_order))
+        # Add the song to the current song list
+        self.song_list.append(track)
+
     def play_pause(self):
         if not self.is_playing():
             self.player.play()
