@@ -13,7 +13,7 @@ try:
     import dbus.mainloop.glib
     DBusServiceObject = dbus.service.Object
 except ImportError:
-    DBusServiceObject = None
+    DBusServiceObject = object
     logger.warning(
         'DBus not installed, you won\'t be able to control the '
         'player via DBus'
