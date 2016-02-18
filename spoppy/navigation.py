@@ -52,6 +52,9 @@ class Leifur(object):
             self.print_menu(going.get_ui())
             response = going.get_response()
             logger.debug('Got response %s' % response)
+            if callable(response):
+                response = response()
+                logger.debug('Got response %s after evaluation' % response)
             if response == responses.QUIT:
                 click.clear()
                 click.echo('Thanks, bye!')
@@ -63,8 +66,6 @@ class Leifur(object):
             elif response == responses.PLAYER:
                 self.navigate_to(self.player)
             else:
-                if callable(response):
-                    response = response()
                 self.navigate_to(response)
             # This happens when the `going` instance gets control again. We
             # don't want to remember the query and we want to rebuild the
@@ -114,4 +115,4 @@ class Leifur(object):
         click.echo(s, nl=False)
 
     def get_ui_width(self):
-        return get_terminal_size().width 
+        return get_terminal_size().width
