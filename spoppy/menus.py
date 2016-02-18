@@ -180,6 +180,7 @@ class PlayListOverview(Menu):
 
 
 class PlayListSelected(Menu):
+    playlist = None
 
     def shuffle_play(self):
         self.navigator.player.load_playlist(
@@ -191,11 +192,20 @@ class PlayListSelected(Menu):
 
     def select_song(self, track_idx):
         def song_selected():
-            self.navigator.player.load_playlist(
-                self.playlist,
-            )
-            self.navigator.player.play_track(track_idx)
-            return self.navigator.player
+            if self.navigator.player.is_playing():
+                # If the user is currently playing we want him to have the
+                # choice to add this song to the list of current songs or
+                # start playing this playlist from this song
+                menu = SongSelectedWhilePlaying(self.navigator)
+                menu.playlist = self.playlist
+                menu.track = self.playlist.tracks[track_idx]
+                return menu
+            else:
+                self.navigator.player.load_playlist(
+                    self.playlist
+                )
+                self.navigator.player.play_track(track_idx)
+                return self.navigator.player
         return song_selected
 
     def get_options(self):
@@ -217,3 +227,43 @@ class PlayListSelected(Menu):
 
     def get_header(self):
         return 'Playlist [%s] selected' % self.playlist.name
+
+
+class SongSelectedWhilePlaying(Menu):
+    playlist = None
+    track = None
+
+    def add_to_queue(self):
+        self.navigator.player.add_to_queue(self.track)
+        return responses.UP
+
+    def replace_current(self):
+        self.navigator.player.load_playlist(
+            self.playlist
+        )
+        self.navigator.player.play_track(
+            self.playlist.tracks.index(self.track)
+        )
+        return self.navigator.player
+
+    # Only thing we know here is that the player is currently playing something
+    def get_options(self):
+        results = {}
+        if self.playlist:
+            results['replace'] = (
+                'Replace currently playing with %s' % (self.playlist.name),
+                self.replace_current
+            )
+        results['add_to_queue'] = (
+            'Add %s to queue' % format_track(self.track),
+            self.add_to_queue
+        )
+        return results
+
+    def get_header(self):
+        if self.playlist:
+            return 'Song [%s] from playlist [%s] selected' % (
+                format_track(self.track), self.playlist.name
+            )
+        else:
+            return 'Song [%s] selected'
