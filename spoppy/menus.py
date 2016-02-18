@@ -142,10 +142,6 @@ class Menu(object):
         return ''
 
 
-class LiveMenu(Menu):
-    pass
-
-
 class MainMenu(Menu):
     INCLUDE_UP_ITEM = False
 
