@@ -30,4 +30,4 @@ You will need a Spotify Premium account.
 3. Symlink gobject (and possibly glib) to your virtualenv
   * ln -s /usr/lib/python3.5/site-packages/gobject/ $VIRTUAL_ENV/lib/python3.5/site-packages/gobject
   * ln -s /usr/lib/python3.5/site-packages/glib/ $VIRTUAL_ENV/lib/python3.5/site-packages/glib
-4. The service will be available at "org/mpris/MediaPlayer2/spoppy"
+4. The service will be available at "/com/spoppy" (f.x. `qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
