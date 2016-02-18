@@ -5,7 +5,8 @@ import threading
 import spotify
 from appdirs import user_cache_dir
 
-from .dbus_listener import Listener
+from .dbus_listener import DBusListener
+from .terminal import ResizeChecker
 
 logger = logging.getLogger(__name__)
 
@@ -22,21 +23,31 @@ class LifeCycle(object):
         self.username = username
         self.password = password
         self._pyspotify_session = None
-        self.dbus_stop_event = threading.Event()
-        self.dbus_listener = Listener(self, self.dbus_stop_event)
+        self.service_stop_event = threading.Event()
+        self.services = [
+            DBusListener(self, self.service_stop_event),
+            ResizeChecker(self, self.service_stop_event)
+        ]
 
     def start_lifecycle_services(self):
-        self.dbus_listener.start()
+        for service in self.services:
+            if service.should_run:
+                service.start()
+                logger.debug('%s started!' % service)
+            else:
+                logger.debug('Not running %s' % service)
 
     def shutdown(self):
         if self._pyspotify_session:
             logger.debug('Logging user out after quit...')
             self._pyspotify_session.logout()
         logger.debug('Closing dbus_listener')
-        self.dbus_stop_event.set()
-        while self.dbus_listener.is_alive():
-            logger.debug('Joining dbus_listener')
-            self.dbus_listener.join(0.5)
+        self.service_stop_event.set()
+        while self.services:
+            logger.debug('Joining %s' % self.services[0])
+            self.services[0].join(0.5)
+            if not self.services[0].is_alive():
+                del self.services[0]
 
     def get_pyspotify_client(self):
         return self._pyspotify_session

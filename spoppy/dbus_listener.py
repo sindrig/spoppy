@@ -14,6 +14,7 @@ try:
     DBusServiceObject = dbus.service.Object
 except ImportError:
     DBusServiceObject = object
+    dbus = None
     logger.warning(
         'DBus not installed, you won\'t be able to control the '
         'player via DBus'
@@ -90,17 +91,19 @@ class SpoppyDBusService(DBusServiceObject):
         return ''
 
 
-class Listener(threading.Thread):
+class DBusListener(threading.Thread):
     def __init__(self, lifecycle, stop_event, *args):
         self.lifecycle = lifecycle
         self.stop_event = stop_event
-        super(Listener, self).__init__()
+        self.should_run = dbus and gobject
+        if not self.should_run:
+            logger.warning(
+                'DBusListener thread aborting because of missing dependencies'
+            )
+        super(DBusListener, self).__init__()
 
     def run(self):
-        if not (DBusServiceObject and gobject):
-            logger.warning(
-                'Listener thread aborting because of missing dependencies'
-            )
+        if not self.should_run:
             return
         self.service = SpoppyDBusService(self.lifecycle)
         self.service_thread = threading.Thread(
