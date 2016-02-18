@@ -14,11 +14,11 @@ class LifeCycle(object):
 
     user_cache_dir = user_cache_dir(appname='spoppy')
 
-    def __init__(self, username, password, navigator):
+    def __init__(self, username, password, player):
         if not os.path.isdir(self.user_cache_dir):
             # TODO: Use this for pyspotify's cache
             os.makedirs(self.user_cache_dir)
-        self.navigator = navigator
+        self.player = player
         self.username = username
         self.password = password
         self._pyspotify_session = None

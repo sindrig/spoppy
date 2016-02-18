@@ -15,8 +15,8 @@ class Leifur(object):
     def __init__(self, username, password):
         self.username = username
         self.password = password
-        self.lifecycle = LifeCycle(username, password, self)
         self.player = Player(self)
+        self.lifecycle = LifeCycle(username, password, self.player)
         self.session = None
         logger.debug('Leifur initialized')
 

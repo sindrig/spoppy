@@ -57,7 +57,7 @@ class SpoppyDBusService(DBusServiceObject):
         in_signature='', out_signature='b'
     )
     def PlayPause(self):
-        self.lifecycle.navigator.player.play_pause()
+        self.lifecycle.player.play_pause()
         return True
 
     @dbus.service.method(
@@ -65,28 +65,28 @@ class SpoppyDBusService(DBusServiceObject):
         in_signature='', out_signature='s'
     )
     def Previous(self):
-        self.lifecycle.navigator.player.previous_song()
-        self.lifecycle.navigator.player.trigger_redraw()
+        self.lifecycle.player.previous_song()
+        self.lifecycle.player.trigger_redraw()
         _thread.interrupt_main()
-        return format_track(self.lifecycle.navigator.player.current_track)
+        return format_track(self.lifecycle.player.current_track)
 
     @dbus.service.method(
         "com.spoppy",
         in_signature='', out_signature='s'
     )
     def Next(self):
-        self.lifecycle.navigator.player.next_song()
-        self.lifecycle.navigator.player.trigger_redraw()
+        self.lifecycle.player.next_song()
+        self.lifecycle.player.trigger_redraw()
         _thread.interrupt_main()
-        return format_track(self.lifecycle.navigator.player.current_track)
+        return format_track(self.lifecycle.player.current_track)
 
     @dbus.service.method(
         "com.spoppy",
         in_signature='', out_signature='s'
     )
     def Current(self):
-        if self.lifecycle.navigator.player.current_track:
-            return format_track(self.lifecycle.navigator.player.current_track)
+        if self.lifecycle.player.current_track:
+            return format_track(self.lifecycle.player.current_track)
         return ''
 
 
