@@ -1,5 +1,9 @@
-import threading
 import logging
+import threading
+
+import _thread
+
+from .util import format_track
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +59,35 @@ class SpoppyDBusService(DBusServiceObject):
     def PlayPause(self):
         self.lifecycle.navigator.player.play_pause()
         return True
+
+    @dbus.service.method(
+        "com.spoppy",
+        in_signature='', out_signature='s'
+    )
+    def Previous(self):
+        self.lifecycle.navigator.player.previous_song()
+        self.lifecycle.navigator.player.trigger_redraw()
+        _thread.interrupt_main()
+        return format_track(self.lifecycle.navigator.player.current_track)
+
+    @dbus.service.method(
+        "com.spoppy",
+        in_signature='', out_signature='s'
+    )
+    def Next(self):
+        self.lifecycle.navigator.player.next_song()
+        self.lifecycle.navigator.player.trigger_redraw()
+        _thread.interrupt_main()
+        return format_track(self.lifecycle.navigator.player.current_track)
+
+    @dbus.service.method(
+        "com.spoppy",
+        in_signature='', out_signature='s'
+    )
+    def Current(self):
+        if self.lifecycle.navigator.player.current_track:
+            return format_track(self.lifecycle.navigator.player.current_track)
+        return ''
 
 
 class Listener(threading.Thread):

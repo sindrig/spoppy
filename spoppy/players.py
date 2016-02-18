@@ -70,6 +70,10 @@ class Player(object):
         self.show_help = False
         self.playlist = None
         self.song_list = []
+        self._trigger_redraw = False
+
+    def trigger_redraw(self):
+        self._trigger_redraw = True
 
     def get_ui(self):
         res = []
@@ -255,6 +259,9 @@ class Player(object):
                     response = NOOP
                 else:
                     return response
+            if self._trigger_redraw:
+                self._trigger_redraw = False
+                return NOOP
 
     def get_progress(self):
         seconds_played = self.seconds_played
