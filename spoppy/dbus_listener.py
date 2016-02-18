@@ -97,7 +97,7 @@ class Listener(threading.Thread):
         super(Listener, self).__init__()
 
     def run(self):
-        if not (DBusServiceObject or gobject):
+        if not (DBusServiceObject and gobject):
             logger.warning(
                 'Listener thread aborting because of missing dependencies'
             )
