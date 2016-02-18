@@ -21,6 +21,8 @@ class Player(object):
 
     def __init__(self, navigator):
         self.navigator = navigator
+        self._initialized = False
+
         self.clear()
         self.actions = {
             b'n': self.next_song,
@@ -57,7 +59,11 @@ class Player(object):
         pdb.set_trace()
 
     def initialize(self):
-        pass
+        if not self._initialized:
+            # For quicker access
+            self.session = self.navigator.session
+            self.player = self.session.player
+            self._initialized = True
 
     def clear(self):
         self.current_track_idx = 0
@@ -155,12 +161,15 @@ class Player(object):
         self.repeat = self.REPEAT_OPTIONS[new_idx]
         return NOOP
 
+    def is_playing(self):
+        return self.player.state == 'playing'
+
     def play_pause(self):
-        if self.navigator.session.player.state != 'playing':
-            self.navigator.session.player.play()
+        if not self.is_playing():
+            self.player.play()
             self.play_timestamp = time.time()
         else:
-            self.navigator.session.player.pause()
+            self.player.pause()
             self.seconds_played += time.time() - self.play_timestamp
             self.play_timestamp = None
         return NOOP
@@ -196,7 +205,7 @@ class Player(object):
             self.seconds_played += time.time() - self.play_timestamp
             self.play_timestamp = time.time()
         self.seconds_played -= 10
-        self.navigator.session.player.seek(int(self.seconds_played * 1000))
+        self.player.seek(int(self.seconds_played * 1000))
         return NOOP
 
     def forward_10s(self):
@@ -204,11 +213,11 @@ class Player(object):
             self.seconds_played += time.time() - self.play_timestamp
             self.play_timestamp = time.time()
         self.seconds_played += 10
-        self.navigator.session.player.seek(int(self.seconds_played * 1000))
+        self.player.seek(int(self.seconds_played * 1000))
         return NOOP
 
     def play_current_song(self):
-        self.navigator.session.player.unload()
+        self.player.unload()
         self.end_of_track = threading.Event()
 
         current_track = self.get_track_by_idx(self.current_track_idx)
@@ -221,7 +230,7 @@ class Player(object):
             self.current_track.duration / 1000
         )
 
-        self.navigator.session.player.load(self.current_track)
+        self.player.load(self.current_track)
         self.play_pause()
 
         self.seconds_played = 0
@@ -229,7 +238,7 @@ class Player(object):
         logger.debug('Playing track %s' % self.current_track.name)
 
         # Register event listeners
-        self.navigator.session.on(
+        self.session.on(
             spotify.SessionEvent.END_OF_TRACK,
             self.on_end_of_track
         )
@@ -238,7 +247,7 @@ class Player(object):
         # This is actually our game loop... because fuck you that's why
         response = NOOP
         while response == NOOP:
-            self.navigator.session.process_events()
+            self.session.process_events()
             if self.end_of_track.is_set():
                 if self.repeat == 'all':
                     self.next_song()
@@ -275,7 +284,7 @@ class Player(object):
         mins_played = self.get_duration_from_s(seconds_played)
 
         return (
-            self.navigator.session.player.state,
+            self.player.state,
             mins_played,
             percent_played,
             self.current_track_duration

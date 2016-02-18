@@ -27,6 +27,7 @@ class Leifur(object):
             logger.debug('Starting LifeCycle services')
             self.lifecycle.start_lifecycle_services()
             logger.debug('LifeCycle services started')
+            self.player.initialize()
             main_menu = menus.MainMenu(self)
             while True:
                 self.navigate_to(main_menu)
