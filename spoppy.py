@@ -33,4 +33,11 @@ def main(username, password, debug):
 
 
 if __name__ == '__main__':
-    main(auto_envvar_prefix='SPOPPY', standalone_mode=False)
+    try:
+        main(standalone_mode=False)
+    except click.exceptions.MissingParameter:
+        click.echo(
+            'You must either set the SPOPPY_USERNAME and SPOPPY_PASSWORD '
+            'environment variables or add username and password to your '
+            'the script\'s parameters!'
+        )
