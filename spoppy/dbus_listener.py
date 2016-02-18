@@ -103,8 +103,6 @@ class DBusListener(threading.Thread):
         super(DBusListener, self).__init__()
 
     def run(self):
-        if not self.should_run:
-            return
         self.service = SpoppyDBusService(self.lifecycle)
         self.service_thread = threading.Thread(
             target=self.service.run
