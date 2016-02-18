@@ -15,20 +15,18 @@ class Leifur(object):
     def __init__(self, username, password):
         self.username = username
         self.password = password
-        self.lifecycle = LifeCycle(username, password)
         self.player = Player(self)
+        self.lifecycle = LifeCycle(username, password, self.player)
         self.session = None
         logger.debug('Leifur initialized')
 
     def start(self):
-        # logged_in = (
-        #     self.lifecycle._check_spotipy_logged_in() and
-        #     self.lifecycle._check_pyspotify_logged_in()
-        # )
         if self.lifecycle.check_pyspotify_logged_in():
-            # self.info = self.lifecycle.get_spotipy_client()
-            self.session = self.lifecycle.get_pyspotify_client()
             logger.debug('All tokens are a-OK')
+            self.session = self.lifecycle.get_pyspotify_client()
+            logger.debug('Starting LifeCycle services')
+            self.lifecycle.start_lifecycle_services()
+            logger.debug('LifeCycle services started')
             main_menu = menus.MainMenu(self)
             while True:
                 self.navigate_to(main_menu)
@@ -40,9 +38,7 @@ class Leifur(object):
             logger.debug('Something went wrong, not logged in...')
 
     def shutdown(self):
-        if self.session:
-            logger.debug('Logging user out after quit...')
-            self.session.logout()
+        self.lifecycle.shutdown()
 
     def navigate_to(self, going):
         logger.debug('navigating to: %s' % going)
