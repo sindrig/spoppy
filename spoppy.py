@@ -6,7 +6,7 @@ import click
 from spoppy import logging_utils
 from spoppy.navigation import Leifur
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('spoppy.main')
 
 
 @click.command()
@@ -34,7 +34,7 @@ def main(username, password, debug):
 
 if __name__ == '__main__':
     try:
-        main(standalone_mode=False)
+        main()
     except click.exceptions.MissingParameter:
         click.echo(
             'You must either set the SPOPPY_USERNAME and SPOPPY_PASSWORD '

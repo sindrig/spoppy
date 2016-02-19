@@ -194,7 +194,7 @@ class Search(Menu):
         return self
 
     def get_response(self):
-        while self.is_searching:
+        if self.is_searching:
             self.search.loaded_event.wait()
             self.is_searching = False
 
