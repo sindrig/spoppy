@@ -8,6 +8,8 @@ import _thread
 import termios
 import tty
 
+from . import responses
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,6 +51,17 @@ def format_track(track):
             if artist.name
         )
     )
+
+
+def sorted_menu_items(items):
+    global_items = []
+    for key, value in sorted(items):
+        if value.destination in responses.ALL:
+            global_items.append((key, value))
+        else:
+            yield key, value
+    for key, value in global_items:
+        yield key, value
 
 if __name__ == '__main__':
     if sys.argv[-1] == 'wrapper':

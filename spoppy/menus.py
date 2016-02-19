@@ -1,11 +1,14 @@
 import logging
+from collections import namedtuple
 
 from spotify import TrackAvailability
 
 from . import responses
-from .util import format_track, single_char_with_timeout
+from .util import format_track, single_char_with_timeout, sorted_menu_items
 
 logger = logging.getLogger(__name__)
+
+MenuValue = namedtuple('MenuValue', ('name', 'destination'))
 
 
 class Options(dict):
@@ -82,11 +85,11 @@ class Menu(object):
         self._options = getattr(self, 'get_options', lambda: {})()
         if not isinstance(self._options, Options):
             self._options = Options(self._options)
-        self._options['q'] = ('quit', responses.QUIT)
+        self._options['q'] = MenuValue('quit', responses.QUIT)
         if self.INCLUDE_UP_ITEM:
-            self._options['u'] = ('..', responses.UP)
+            self._options['u'] = MenuValue('..', responses.UP)
         if self.navigator.player.has_been_loaded():
-            self._options['p'] = ('player', responses.PLAYER)
+            self._options['p'] = MenuValue('player', responses.PLAYER)
         self.filter = ''
 
     def get_response(self):
@@ -113,14 +116,18 @@ class Menu(object):
 
     def get_ui(self):
         if self.filter:
-            items = sorted(self._options.filter(self.filter).items())
+            items = sorted_menu_items(
+                self._options.filter(self.filter).items()
+            )
         else:
-            items = sorted(self._options.items())
+            items = sorted_menu_items(
+                self._options.items()
+            )
         if not items:
             menu_items = ('No matches for "%s"' % self.filter, )
         else:
             menu_items = tuple(
-                self.get_menu_item(key, value[0]) for key, value in
+                self.get_menu_item(key, value.name) for key, value in
                 items
             )
             if self.filter:
@@ -150,8 +157,10 @@ class MainMenu(Menu):
 
     def get_options(self):
         return {
-            'vp': ('View playlists', PlayListOverview(self.navigator)),
-            's': ('Search', Search(self.navigator))
+            'vp': MenuValue(
+                'View playlists', PlayListOverview(self.navigator)
+            ),
+            's': MenuValue('Search', Search(self.navigator))
         }
 
 
@@ -172,7 +181,9 @@ class PlayListOverview(Menu):
         for i, playlist in playlists:
             menu_item = PlayListSelected(self.navigator)
             menu_item.playlist = playlist.link.as_playlist()
-            results[str(i+1).rjust(4)] = (menu_item.playlist.name, menu_item)
+            results[str(i+1).rjust(4)] = MenuValue(
+                menu_item.playlist.name, menu_item
+            )
         return results
 
     def get_header(self):
@@ -252,7 +263,7 @@ class SearchResults(Menu):
             self.search.tracks
             if track.availability != TrackAvailability.UNAVAILABLE
         ):
-            results[str(i+1).rjust(4)] = (
+            results[str(i+1).rjust(4)] = MenuValue(
                 format_track(track), self.select_song(i)
             )
         return results
@@ -294,11 +305,11 @@ class PlayListSelected(Menu):
             self.playlist.tracks
             if track.availability != TrackAvailability.UNAVAILABLE
         ):
-            results[str(i+1).rjust(4)] = (
+            results[str(i+1).rjust(4)] = MenuValue(
                 format_track(track), self.select_song(i)
             )
         if results:
-            results['sp'] = ('Shuffle play', self.shuffle_play)
+            results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
         else:
             logger.debug('There are no songs in this playlist!')
 
@@ -329,11 +340,11 @@ class SongSelectedWhilePlaying(Menu):
     def get_options(self):
         results = {}
         if self.playlist:
-            results['replace'] = (
+            results['replace'] = MenuValue(
                 'Replace currently playing with %s' % (self.playlist.name),
                 self.replace_current
             )
-        results['add_to_queue'] = (
+        results['add_to_queue'] = MenuValue(
             'Add %s to queue' % format_track(self.track),
             self.add_to_queue
         )
