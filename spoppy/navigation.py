@@ -40,6 +40,7 @@ class Leifur(object):
 
     def shutdown(self):
         self.lifecycle.shutdown()
+        logger.debug('Navigation shutdown complete')
 
     def navigate_to(self, going):
         logger.debug('navigating to: %s' % going)

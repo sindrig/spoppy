@@ -48,6 +48,7 @@ class LifeCycle(object):
             self.services[0].join(0.5)
             if not self.services[0].is_alive():
                 del self.services[0]
+        logger.debug('All services joined')
 
     def get_pyspotify_client(self):
         return self._pyspotify_session

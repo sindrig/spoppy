@@ -19,7 +19,8 @@ class Options(dict):
 
     def __setitem__(self, key, value):
         super(Options, self).__setitem__(key, value)
-        self._stripped_keys_mapper[key.replace(' ', '')] = key
+        if hasattr(self, '_stripped_keys_mapper'):
+            self._stripped_keys_mapper[key.replace(' ', '')] = key
 
     def get_possibilities(self, pattern):
         if pattern in self._cached_matches:
@@ -78,7 +79,9 @@ class Menu(object):
         self.navigator = navigator
 
     def initialize(self):
-        self._options = Options(self.get_options())
+        self._options = getattr(self, 'get_options', lambda: {})()
+        if not isinstance(self._options, Options):
+            self._options = Options(self._options)
         self._options['q'] = ('quit', responses.QUIT)
         if self.INCLUDE_UP_ITEM:
             self._options['u'] = ('..', responses.UP)
@@ -98,15 +101,15 @@ class Menu(object):
             # The user wants to go someplace...
             self.filter = self.filter.replace('\n', '')
             # Gets set as the item to navigate to if we only found one
-            is_valid = self.is_valid_response(self.filter)
+            is_valid = self.is_valid_response()
             if is_valid:
                 # Ok, return
                 return is_valid[1]
         # Trigger redraw!
         return responses.NOOP
 
-    def is_valid_response(self, response):
-        return self._options.match_best_or_none(response)
+    def is_valid_response(self):
+        return self._options.match_best_or_none(self.filter)
 
     def get_ui(self):
         if self.filter:
@@ -121,7 +124,7 @@ class Menu(object):
                 items
             )
             if self.filter:
-                is_valid = self.is_valid_response(self.filter)
+                is_valid = self.is_valid_response()
                 if is_valid:
                     menu_items += (
                         '',
@@ -147,7 +150,8 @@ class MainMenu(Menu):
 
     def get_options(self):
         return {
-            'vp': ('View playlists', PlayListOverview(self.navigator))
+            'vp': ('View playlists', PlayListOverview(self.navigator)),
+            's': ('Search', Search(self.navigator))
         }
 
 
@@ -173,6 +177,87 @@ class PlayListOverview(Menu):
 
     def get_header(self):
         return 'Select a playlist'
+
+
+class Search(Menu):
+    is_searching = False
+    search_pattern = ''
+    search = None
+
+    def get_search_results(self):
+        self.search_pattern = self.filter
+        # TODO: Hopefully remove this sometime...
+        from .search import search
+        self.search = search(self.navigator.session, self.search_pattern)
+        # self.search = self.navigator.session.search(self.search_pattern)
+        self.is_searching = True
+        return self
+
+    def get_response(self):
+        while self.is_searching:
+            self.search.loaded_event.wait()
+            self.is_searching = False
+
+            search_results = SearchResults(self.navigator)
+            search_results.search = self.search
+
+            self.is_searching = None
+            self.search = None
+            self.search_pattern = None
+
+            return search_results
+        return super(Search, self).get_response()
+
+    def is_valid_response(self):
+        if self.search and self.search.loaded:
+            return (None, self.search_results_arrived)
+        return super(Search, self).is_valid_response() or (
+            None, self.get_search_results
+        )
+
+    def get_ui(self):
+        if self.is_searching:
+            return 'Searching for %s' % self.search_pattern
+        else:
+            return '\n'.join((
+                'Search query: %s' % self.filter,
+                '',
+                'Press [return] to search',
+                '(Pro tip: you can also input "u" to go up or "q" to quit)'
+            ))
+
+
+class SearchResults(Menu):
+    search = None
+
+    def select_song(self, track_idx):
+        def song_selected():
+            track = self.search.tracks[track_idx]
+            if self.navigator.player.is_playing():
+                # If the user is currently playing we want him to have the
+                # choice to add this song to the list of current songs or
+                # start playing this playlist from this song
+                menu = SongSelectedWhilePlaying(self.navigator)
+                menu.track = track
+                return menu
+            else:
+                self.navigator.player.clear()
+                self.navigator.player.add_to_queue(track)
+                self.navigator.player.play_track(0)
+                return self.navigator.player
+        return song_selected
+
+    def get_options(self):
+        results = {}
+        for i, track in enumerate(
+            track for track in
+            self.search.tracks
+            if track.availability != TrackAvailability.UNAVAILABLE
+        ):
+            results[str(i+1).rjust(4)] = (
+                format_track(track), self.select_song(i)
+            )
+        return results
 
 
 class PlayListSelected(Menu):
