@@ -201,15 +201,14 @@ class Search(Menu):
             search_results = SearchResults(self.navigator)
             search_results.search = self.search
 
+            self.is_searching = False
+            self.search_pattern = ''
             self.search = None
-            self.search_pattern = None
 
             return search_results
         return super(Search, self).get_response()
 
     def is_valid_response(self):
-        if self.search and self.search.loaded:
-            return (None, self.search_results_arrived)
         return super(Search, self).is_valid_response() or (
             None, self.get_search_results
         )

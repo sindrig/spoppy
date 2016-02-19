@@ -64,7 +64,7 @@ class Leifur(object):
                 continue
             elif response == responses.PLAYER:
                 self.navigate_to(self.player)
-            else:
+            elif response != going:
                 self.navigate_to(response)
             # This happens when the `going` instance gets control again. We
             # don't want to remember the query and we want to rebuild the
