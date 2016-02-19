@@ -17,6 +17,7 @@ class Leifur(object):
         self.player = Player(self)
         self.lifecycle = LifeCycle(username, password, self.player)
         self.session = None
+        self.navigating = True
         logger.debug('Leifur initialized')
 
     def start(self):
@@ -44,7 +45,7 @@ class Leifur(object):
         logger.debug('navigating to: %s' % going)
         self.session.process_events()
         going.initialize()
-        while True:
+        while self.navigating:
             logger.debug('clearing screen...')
             click.clear()
             self.print_header()
@@ -57,6 +58,7 @@ class Leifur(object):
             if response == responses.QUIT:
                 click.clear()
                 click.echo('Thanks, bye!')
+                self.navigating = False
                 return
             elif response == responses.UP:
                 break

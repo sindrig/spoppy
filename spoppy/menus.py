@@ -107,7 +107,7 @@ class Menu(object):
             is_valid = self.is_valid_response()
             if is_valid:
                 # Ok, return
-                return is_valid[1]
+                return is_valid.destination
         # Trigger redraw!
         return responses.NOOP
 
@@ -135,7 +135,7 @@ class Menu(object):
                 if is_valid:
                     menu_items += (
                         '',
-                        'Press [return] to go to (%s)' % is_valid[0]
+                        'Press [return] to go to (%s)' % is_valid.name
                     )
 
         above_menu_items = self.get_header()
@@ -220,7 +220,7 @@ class Search(Menu):
         return super(Search, self).get_response()
 
     def is_valid_response(self):
-        return super(Search, self).is_valid_response() or (
+        return super(Search, self).is_valid_response() or MenuValue(
             None, self.get_search_results
         )
 
