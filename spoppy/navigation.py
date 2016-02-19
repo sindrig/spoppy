@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import click
 
@@ -29,8 +28,7 @@ class Leifur(object):
             logger.debug('LifeCycle services started')
             self.player.initialize()
             main_menu = menus.MainMenu(self)
-            while True:
-                self.navigate_to(main_menu)
+            self.navigate_to(main_menu)
         else:
             click.echo(
                 'Could not log you in, please check your username (%s) '
@@ -59,7 +57,7 @@ class Leifur(object):
             if response == responses.QUIT:
                 click.clear()
                 click.echo('Thanks, bye!')
-                sys.exit(0)
+                return
             elif response == responses.UP:
                 break
             elif response == responses.NOOP:

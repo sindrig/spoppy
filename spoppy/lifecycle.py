@@ -49,6 +49,8 @@ class LifeCycle(object):
             if not self.services[0].is_alive():
                 del self.services[0]
         logger.debug('All services joined')
+        self._pyspotify_session_loop.stop()
+        logger.debug('Pyspotify session loop stopped')
 
     def get_pyspotify_client(self):
         return self._pyspotify_session
@@ -61,8 +63,10 @@ class LifeCycle(object):
             os.path.join(os.path.dirname(__file__), 'spotify_appkey.key')
         )
         self._pyspotify_session = spotify.Session(config)
-        loop = spotify.EventLoop(self._pyspotify_session)
-        loop.start()
+        self._pyspotify_session_loop = spotify.EventLoop(
+            self._pyspotify_session
+        )
+        self._pyspotify_session_loop.start()
 
         # Connect an audio sink
         spotify.AlsaSink(self._pyspotify_session)

@@ -194,14 +194,13 @@ class Search(Menu):
         return self
 
     def get_response(self):
-        while self.is_searching:
+        if self.is_searching:
             self.search.loaded_event.wait()
             self.is_searching = False
 
             search_results = SearchResults(self.navigator)
             search_results.search = self.search
 
-            self.is_searching = None
             self.search = None
             self.search_pattern = None
 
