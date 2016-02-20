@@ -104,6 +104,10 @@ class Player(object):
         if self.current_track:
             # We can show number of items - current items - currently playing
             max_number_of_items = self.navigator.get_ui_height() - len(res) - 3
+            if self.current_track_idx == 0:
+                max_number_of_items += 1
+            if self.current_track_idx == len(self.song_list) - 1:
+                max_number_of_items += 1
             previous_items_to_show = min([
                 int(max_number_of_items / 2),
                 self.current_track_idx
@@ -138,18 +142,26 @@ class Player(object):
                 song = self.get_track_by_idx(song_idx)
                 right_side = right_side_items and right_side_items.pop()
                 if song == self.current_track:
-                    # Small spacing around current...
-                    res.append('')
+                    if song_idx != songs_to_show[0]:
+                        # Small spacing around current...
+                        res.append(('', right_side or ''))
+                        right_side = (
+                            right_side_items and right_side_items.pop()
+                        )
                     formatted_song = '>>>%s' % format_track(song)
                 else:
                     formatted_song = format_track(song)
-                if right_side:
-                    res.append((formatted_song, right_side))
-                else:
-                    res.append(formatted_song)
+                res.append((formatted_song, right_side or ''))
                 if song == self.current_track:
-                    # Small spacing around current...
-                    res.append('')
+                    if song_idx != songs_to_show[-1]:
+                        # Small spacing around current...
+                        right_side = (
+                            right_side_items and right_side_items.pop()
+                        )
+                        res.append(('', right_side or ''))
+            while right_side_items:
+                # This can happend f.x. when we have one song...
+                res.append(('', right_side_items.pop()))
         else:
             res.append('No songs found in playlist!')
 
