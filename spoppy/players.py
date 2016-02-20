@@ -226,6 +226,7 @@ class Player(object):
         self.song_order.append(len(self.song_order))
         # Add the song to the current song list
         self.song_list.append(track)
+        self.playlist = None
 
     def play_pause(self):
         if not self.is_playing():
