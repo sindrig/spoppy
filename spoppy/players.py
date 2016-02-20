@@ -89,24 +89,6 @@ class Player(object):
         res.append('Press h for help')
         if self.playlist:
             res.append('Playing playlist: %s' % self.playlist.name)
-        if self.current_track:
-            res.append(
-                (
-                    'Current song: %s' % format_track(self.current_track),
-                    'Repeat: %s' % self.repeat
-                )
-            )
-            next_track = self.get_track_by_idx(self.get_next_idx())
-            res.append(
-                (
-                    'Next song: %s' % format_track(next_track),
-                    'Shuffle on' if self.shuffle else ''
-                )
-            )
-            previous_track = self.get_track_by_idx(self.get_prev_idx())
-            res.append('Previous song: %s' % format_track(previous_track))
-        else:
-            res.append('No songs found in playlist!')
         if self.show_help:
             res.append('')
             for action, hotkeys in sorted(self.reversed_actions.items()):
@@ -116,6 +98,72 @@ class Player(object):
                         action
                     )
                 )
+
+        res.append('')
+
+        if self.current_track:
+            # We can show number of items - current items - currently playing
+            max_number_of_items = self.navigator.get_ui_height() - len(res) - 3
+            if self.current_track_idx == 0:
+                max_number_of_items += 1
+            if self.current_track_idx == len(self.song_list) - 1:
+                max_number_of_items += 1
+            previous_items_to_show = min([
+                int(max_number_of_items / 2),
+                self.current_track_idx
+            ])
+            next_items_to_show = min([
+                max_number_of_items - previous_items_to_show,
+                len(self.song_list[self.current_track_idx:])
+            ])
+            total_number_to_show = previous_items_to_show + next_items_to_show
+            if total_number_to_show < max_number_of_items:
+                previous_items_to_show = min([
+                    max_number_of_items - next_items_to_show,
+                    len(self.song_list[:self.current_track_idx])
+
+                ])
+            right_side_items = [
+                'Shuffle on' if self.shuffle else '',
+                'Repeat: %s' % self.repeat,
+            ]
+            songs_to_show = (
+                list(range(
+                    self.current_track_idx - previous_items_to_show,
+                    self.current_track_idx
+                )) +
+                [self.current_track_idx] +
+                list(range(
+                    self.current_track_idx + 1,
+                    self.current_track_idx + next_items_to_show
+                ))
+            )
+            for song_idx in songs_to_show:
+                song = self.get_track_by_idx(song_idx)
+                right_side = right_side_items and right_side_items.pop()
+                if song == self.current_track:
+                    if song_idx != songs_to_show[0]:
+                        # Small spacing around current...
+                        res.append(('', right_side or ''))
+                        right_side = (
+                            right_side_items and right_side_items.pop()
+                        )
+                    formatted_song = '>>>%s' % format_track(song)
+                else:
+                    formatted_song = format_track(song)
+                res.append((formatted_song, right_side or ''))
+                if song == self.current_track:
+                    if song_idx != songs_to_show[-1]:
+                        # Small spacing around current...
+                        right_side = (
+                            right_side_items and right_side_items.pop()
+                        )
+                        res.append(('', right_side or ''))
+            while right_side_items:
+                # This can happend f.x. when we have one song...
+                res.append(('', right_side_items.pop()))
+        else:
+            res.append('No songs found in playlist!')
 
         return res
 
@@ -146,8 +194,14 @@ class Player(object):
         return current_track_idx
 
     def toggle_shuffle(self):
+        # We also have to update the current_track_idx too here since
+        # the order is changing
         self.shuffle = not self.shuffle
+        if self.current_track_idx:
+            currently_playing = self.song_order[self.current_track_idx]
         self.set_song_order_by_shuffle()
+        if self.current_track_idx:
+            self.current_track_idx = self.song_order.index(currently_playing)
         return NOOP
 
     def set_song_order_by_shuffle(self):
