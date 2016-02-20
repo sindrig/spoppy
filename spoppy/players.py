@@ -198,7 +198,6 @@ class Player(object):
     def toggle_shuffle(self):
         # We also have to update the current_track_idx too here since
         # the order is changing
-        logger.debug(self.current_track_idx)
         self.shuffle = not self.shuffle
         if self.current_track_idx <= len(self.song_order):
             currently_playing = self.song_order[self.current_track_idx]
