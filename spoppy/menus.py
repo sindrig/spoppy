@@ -99,6 +99,7 @@ class Menu(object):
         response = None
         while response is None:
             response = single_char_with_timeout(60)
+            self.navigator.player.check_end_of_track()
         if response == Menu.BACKSPACE:
             self.filter = self.filter[:-1]
             return responses.NOOP
