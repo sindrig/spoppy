@@ -324,6 +324,10 @@ class PlayListSelected(Menu):
                 return self.navigator.player
         return song_selected
 
+    def add_to_queue(self):
+        self.navigator.player.add_to_queue(self.playlist)
+        return self.navigator.player
+
     def get_options(self):
         results = {}
         for i, track in enumerate(
@@ -336,6 +340,11 @@ class PlayListSelected(Menu):
             )
         if results:
             results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
+            if self.navigator.player.is_playing():
+                results['add_to_queue'] = MenuValue(
+                    'Add %s to queue' % self.playlist.name,
+                    self.add_to_queue
+                )
         else:
             logger.debug('There are no songs in this playlist!')
 
