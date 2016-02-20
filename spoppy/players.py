@@ -40,6 +40,7 @@ class Player(object):
             b'k': self.backward_10s,
             b'l': self.forward_10s,
             b'h': self.get_help,
+            b'x': self.remove_current_song,
         }
         key_names = {
             b' ': 'space'
@@ -227,6 +228,23 @@ class Player(object):
         # Add the song to the current song list
         self.song_list.append(track)
         self.playlist = None
+
+    def remove_current_song(self):
+        idx_in_song_list = self.song_order[self.current_track_idx]
+        del self.song_order[self.current_track_idx]
+
+        del self.song_list[idx_in_song_list]
+
+        for idx, item in enumerate(self.song_order):
+            if item > idx_in_song_list:
+                self.song_order[idx] -= 1
+
+        if self.current_track_idx >= len(self.song_order):
+            self.previous_song()
+        else:
+            self.play_current_song()
+        self.playlist = None
+        return NOOP
 
     def play_pause(self):
         if not self.is_playing():
