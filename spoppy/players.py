@@ -3,6 +3,7 @@ from collections import defaultdict
 import random
 import threading
 import time
+import _thread
 
 import spotify
 
@@ -22,6 +23,7 @@ class Player(object):
     def __init__(self, navigator):
         self.navigator = navigator
         self._initialized = False
+        self.end_of_track = None
 
         self.clear()
         self.actions = {
@@ -31,6 +33,7 @@ class Player(object):
             b'j': self.previous_song,
             b' ': self.play_pause,
             b'u': UP,
+            b'q': UP,
             b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,
@@ -205,6 +208,7 @@ class Player(object):
 
     def on_end_of_track(self, session):
         self.end_of_track.set()
+        _thread.interrupt_main()
 
     def backward_10s(self):
         if self.play_timestamp:
@@ -249,17 +253,22 @@ class Player(object):
             self.on_end_of_track
         )
 
+    def check_end_of_track(self):
+        if self.end_of_track and self.end_of_track.is_set():
+            if self.repeat == 'all':
+                self.next_song()
+                return NOOP
+            elif self.repeat == 'one':
+                self.play_current_song()
+
     def get_response(self):
         # This is actually our game loop... because fuck you that's why
         response = NOOP
         while response == NOOP:
             self.session.process_events()
-            if self.end_of_track.is_set():
-                if self.repeat == 'all':
-                    self.next_song()
-                    return NOOP
-                elif self.repeat == 'one':
-                    self.play_current_song()
+            end_of_track_response = self.check_end_of_track()
+            if end_of_track_response:
+                return end_of_track_response
             if self.current_track:
                 self.navigator.update_progress(*self.get_progress())
             char = single_char_with_timeout(timeout=1.5)
