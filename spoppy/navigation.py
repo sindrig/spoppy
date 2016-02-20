@@ -117,3 +117,7 @@ class Leifur(object):
 
     def get_ui_width(self):
         return get_terminal_size().width
+
+    def get_ui_height(self):
+        # We want to return the height allocated to the menu
+        return get_terminal_size().height - 4

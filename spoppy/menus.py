@@ -77,6 +77,9 @@ class Menu(object):
     INCLUDE_UP_ITEM = True
 
     BACKSPACE = b'\x7f'
+    UP_ARROW = b'\x1b[A'
+    DOWN_ARROW = b'\x1b[B'
+    PAGE = 0
 
     def __init__(self, navigator):
         self.navigator = navigator
@@ -99,6 +102,15 @@ class Menu(object):
         if response == Menu.BACKSPACE:
             self.filter = self.filter[:-1]
             return responses.NOOP
+        elif response == Menu.UP_ARROW:
+            logger.debug('Got UP_ARROW')
+            self.PAGE = max([self.PAGE - 1, 0])
+            return responses.NOOP
+        elif response == Menu.DOWN_ARROW:
+            logger.debug('Got DOWN_ARROW')
+            self.PAGE += 1
+            return responses.NOOP
+
         self.filter += response.decode('utf-8')
         if self.filter.endswith('\n'):
             # The user wants to go someplace...
@@ -137,6 +149,19 @@ class Menu(object):
                         '',
                         'Press [return] to go to (%s)' % is_valid.name
                     )
+        if menu_items:
+            number_of_menu_items = self.navigator.get_ui_height() - 4
+            if len(menu_items) >= number_of_menu_items:
+                paginated_menu_items = []
+                while not paginated_menu_items:
+                    start_idx = self.PAGE * number_of_menu_items
+                    end_idx = (self.PAGE + 1) * number_of_menu_items
+                    paginated_menu_items = menu_items[start_idx:end_idx]
+                    if not paginated_menu_items:
+                        self.PAGE -= 1
+                menu_items = paginated_menu_items
+            else:
+                self.PAGE = 0
 
         above_menu_items = self.get_header()
         return '\n'.join(
