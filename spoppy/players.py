@@ -143,7 +143,7 @@ class Player(object):
             for song_idx in songs_to_show:
                 song = self.get_track_by_idx(song_idx)
                 right_side = right_side_items and right_side_items.pop()
-                if song == self.current_track:
+                if song_idx == self.current_track_idx:
                     if song_idx != songs_to_show[0]:
                         # Small spacing around current...
                         res.append(('', right_side or ''))
@@ -154,7 +154,7 @@ class Player(object):
                 else:
                     formatted_song = format_track(song)
                 res.append((formatted_song, right_side or ''))
-                if song == self.current_track:
+                if song_idx == self.current_track_idx:
                     if song_idx != songs_to_show[-1]:
                         # Small spacing around current...
                         right_side = (
@@ -221,11 +221,16 @@ class Player(object):
     def is_playing(self):
         return self.player.state == 'playing'
 
-    def add_to_queue(self, track):
-        # Add the newest track_idx to the song order
-        self.song_order.append(len(self.song_order))
-        # Add the song to the current song list
-        self.song_list.append(track)
+    def add_to_queue(self, item):
+        if isinstance(item, spotify.Track):
+            # Add the newest track_idx to the song order
+            self.song_order.append(len(self.song_order))
+            # Add the song to the current song list
+            self.song_list.append(item)
+        elif isinstance(item, spotify.Playlist):
+            for track in item.tracks:
+                if track.availability != spotify.TrackAvailability.UNAVAILABLE:
+                    self.add_to_queue(track)
         self.playlist = None
 
     def remove_current_song(self):
@@ -272,7 +277,7 @@ class Player(object):
         self.song_list = [
             track for track in
             playlist.tracks
-            if track != spotify.TrackAvailability.UNAVAILABLE
+            if track.availability != spotify.TrackAvailability.UNAVAILABLE
         ]
         self.playlist = playlist
         if shuffle is not None:
