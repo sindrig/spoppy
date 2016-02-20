@@ -33,7 +33,7 @@ class Player(object):
             b'j': self.previous_song,
             b' ': self.play_pause,
             b'u': UP,
-            b'q': UP,
+            b'q': self.stop_and_clear,
             b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,
@@ -77,6 +77,7 @@ class Player(object):
         self.song_order = []
         self.current_track_duration = ''
         self.repeat = self.REPEAT_OPTIONS[0]
+        self.shuffle = False
         self.show_help = False
         self.playlist = None
         self.song_list = []
@@ -197,20 +198,19 @@ class Player(object):
     def toggle_shuffle(self):
         # We also have to update the current_track_idx too here since
         # the order is changing
+        logger.debug(self.current_track_idx)
         self.shuffle = not self.shuffle
-        if self.current_track_idx:
+        if self.current_track_idx <= len(self.song_order):
             currently_playing = self.song_order[self.current_track_idx]
         self.set_song_order_by_shuffle()
-        if self.current_track_idx:
+        if currently_playing in self.song_order:
             self.current_track_idx = self.song_order.index(currently_playing)
         return NOOP
 
     def set_song_order_by_shuffle(self):
         self.song_order = list(range(len(self.song_list)))
-        logger.debug('Song order before: %s' % self.song_order)
         if self.shuffle:
             random.shuffle(self.song_order)
-        logger.debug('Song order after: %s' % self.song_order)
 
     def toggle_repeat(self):
         new_idx = self.REPEAT_OPTIONS.index(self.repeat) + 1
@@ -245,6 +245,11 @@ class Player(object):
             self.play_current_song()
         self.playlist = None
         return NOOP
+
+    def stop_and_clear(self):
+        self.player.unload()
+        self.clear()
+        return UP
 
     def play_pause(self):
         if not self.is_playing():
@@ -289,7 +294,6 @@ class Player(object):
             self.play_timestamp = time.time()
         self.seconds_played -= 10
         self.player.seek(int(self.seconds_played * 1000))
-        return NOOP
 
     def forward_10s(self):
         if self.play_timestamp:
@@ -297,7 +301,6 @@ class Player(object):
             self.play_timestamp = time.time()
         self.seconds_played += 10
         self.player.seek(int(self.seconds_played * 1000))
-        return NOOP
 
     def play_current_song(self):
         self.player.unload()
@@ -350,8 +353,9 @@ class Player(object):
             response = self.actions.get(char, NOOP)
             if response != NOOP:
                 if callable(response):
-                    if response():
-                        return NOOP
+                    evaluated_response = response()
+                    if evaluated_response:
+                        return evaluated_response
                     # We have handled the response ourselves
                     response = NOOP
                 else:
