@@ -151,14 +151,17 @@ class Menu(object):
                     )
         if menu_items:
             number_of_menu_items = self.navigator.get_ui_height() - 4
-            paginated_menu_items = []
-            while not paginated_menu_items:
-                start_idx = self.PAGE * number_of_menu_items
-                end_idx = (self.PAGE + 1) * number_of_menu_items
-                paginated_menu_items = menu_items[start_idx:end_idx]
-                if not paginated_menu_items:
-                    self.PAGE -= 1
-            menu_items = paginated_menu_items
+            if len(menu_items) >= number_of_menu_items:
+                paginated_menu_items = []
+                while not paginated_menu_items:
+                    start_idx = self.PAGE * number_of_menu_items
+                    end_idx = (self.PAGE + 1) * number_of_menu_items
+                    paginated_menu_items = menu_items[start_idx:end_idx]
+                    if not paginated_menu_items:
+                        self.PAGE -= 1
+                menu_items = paginated_menu_items
+            else:
+                self.PAGE = 0
 
         above_menu_items = self.get_header()
         return '\n'.join(
