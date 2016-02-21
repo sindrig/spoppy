@@ -93,6 +93,9 @@ class Menu(object):
     def __init__(self, navigator):
         self.navigator = navigator
 
+    def get_options(self):
+        raise NotImplementedError('Subclass must define this method')
+
     def initialize(self):
         self._options = Options(self.get_options())
         self._options['q'] = MenuValue('quit', responses.QUIT)
@@ -172,7 +175,7 @@ class Menu(object):
                 self.PAGE = 0
 
         above_menu_items = self.get_header()
-        return '\n'.join(
+        return (
             (above_menu_items, '') +
             menu_items +
             ('', 'Query: %s' % self.filter, )
@@ -227,6 +230,9 @@ class Search(Menu):
     is_searching = False
     search_pattern = ''
     search = None
+
+    def get_options(self):
+        return {}
 
     def get_search_results(self):
         self.search_pattern = self.filter
