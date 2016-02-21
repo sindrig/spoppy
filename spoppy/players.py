@@ -86,20 +86,25 @@ class Player(object):
     def trigger_redraw(self):
         self._trigger_redraw = True
 
+    def get_help_ui(self):
+        res = []
+        res.append('')
+        for action, hotkeys in sorted(self.reversed_actions.items()):
+            res.append(
+                '[%s]: %s' % (
+                    '/'.join(hotkeys),
+                    action
+                )
+            )
+        return res
+
     def get_ui(self):
         res = []
         res.append('Press h for help')
         if self.playlist:
             res.append('Playing playlist: %s' % self.playlist.name)
         if self.show_help:
-            res.append('')
-            for action, hotkeys in sorted(self.reversed_actions.items()):
-                res.append(
-                    '[%s]: %s' % (
-                        '/'.join(hotkeys),
-                        action
-                    )
-                )
+            res += self.get_help_ui()
 
         res.append('')
 
