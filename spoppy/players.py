@@ -22,6 +22,10 @@ class Player(object):
 
     # Initialization and external helpers
     def __init__(self, navigator):
+        '''
+        Initialize the player. Navigator must be an instance of
+        `spoppy.navigation.Leifur`.
+        '''
         self.navigator = navigator
         self._initialized = False
         self.end_of_track = None
@@ -57,6 +61,11 @@ class Player(object):
             )
 
     def clear(self):
+        '''
+        Resets all variables used for playlist/queue handling to their default
+        values.
+        :returns: None
+        '''
         self.current_track_idx = 0
         self.current_track = None
         self.seconds_played = 0
@@ -71,9 +80,19 @@ class Player(object):
         self._trigger_redraw = False
 
     def has_been_loaded(self):
+        '''
+        Used to determine if some songs are loaded in the player
+        :returns: True if there are any songs in the player's queue
+        '''
         return bool(len(self.song_list))
 
     def initialize(self):
+        '''
+        Initializes some class variables for simpler access to the spotify
+        player. `PySpotify` session must have been initialized before calling
+        initialize, and initialize must be called before playing anything.
+        :returns: None
+        '''
         if not self._initialized:
             # For quicker access
             self.session = self.navigator.session
@@ -81,16 +100,29 @@ class Player(object):
             self._initialized = True
 
     def is_playing(self):
+        '''
+        Used to determine if the `PySpotify` player is is currently playing
+        :returns: True if the player is currently playing
+        '''
         return self.player.state == 'playing'
 
     # UI specific
     def get_duration_from_s(self, s):
+        '''
+        Formats seconds as "%M:%S"
+        :param s: Seconds in int/float
+        :returns: s formatted as "%M:%S"
+        '''
         return '%s:%s' % (
             str(int(s / 60)).zfill(2),
             str(int(s % 60)).zfill(2)
         )
 
     def get_help_ui(self):
+        '''
+        Gets menu items explaining the use of hotkeys within the player
+        :returns: List of hotkeys and their corresponding actions
+        '''
         res = []
         res.append('')
         for action, hotkeys in sorted(self.reversed_actions.items()):
@@ -103,6 +135,13 @@ class Player(object):
         return res
 
     def get_progress(self):
+        '''
+        Get the progress of the currently playing song
+        :returns: 4-item tuple, (player_state,
+                                 minutes_played,
+                                 percent_played,
+                                 current_track_duration)
+        '''
         seconds_played = self.seconds_played
         if self.play_timestamp:
             # We are actually playing and we have to calculate the number of
