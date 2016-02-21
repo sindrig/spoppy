@@ -19,14 +19,23 @@ class Options(dict):
             key.replace(' ', ''): key
             for key in self
         }
+        self.check_unique_keys()
 
     def __setitem__(self, key, value):
         super(Options, self).__setitem__(key, value)
-        if hasattr(self, '_stripped_keys_mapper'):
-            self._stripped_keys_mapper[key.replace(' ', '')] = key
+        self._stripped_keys_mapper[key.replace(' ', '')] = key
+        self.check_unique_keys()
+
+    def check_unique_keys(self):
+        if not len(self) == len(self._stripped_keys_mapper):
+            raise TypeError('Two keys cannot be the same')
+
+    def get_possibilities_from_cache(self, pattern):
+        return self._cached_matches.get(pattern)
 
     def get_possibilities(self, pattern):
-        if pattern in self._cached_matches:
+        cached_match = self.get_possibilities_from_cache(pattern)
+        if cached_match:
             logger.debug('Pattern %s found in cache' % pattern)
         else:
             logger.debug('Trying to match %s' % pattern)
@@ -44,10 +53,10 @@ class Options(dict):
                     possibilities_name.append(key)
             logger.debug('possibilities_key: %s' % possibilities_key)
             logger.debug('possibilities_name: %s' % possibilities_name)
-            self._cached_matches[pattern] = (
+            cached_match = self._cached_matches[pattern] = (
                 list(set(possibilities_key + possibilities_name))
             )
-        return self._cached_matches[pattern]
+        return cached_match
 
     def filter(self, pattern):
         possibilities = self.get_possibilities(pattern)
@@ -85,9 +94,7 @@ class Menu(object):
         self.navigator = navigator
 
     def initialize(self):
-        self._options = getattr(self, 'get_options', lambda: {})()
-        if not isinstance(self._options, Options):
-            self._options = Options(self._options)
+        self._options = Options(self.get_options())
         self._options['q'] = MenuValue('quit', responses.QUIT)
         if self.INCLUDE_UP_ITEM:
             self._options['u'] = MenuValue('..', responses.UP)
