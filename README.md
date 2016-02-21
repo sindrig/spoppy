@@ -31,3 +31,8 @@ You will need a Spotify Premium account.
   * ln -s /usr/lib/python3.5/site-packages/gobject/ $VIRTUAL_ENV/lib/python3.5/site-packages/gobject
   * ln -s /usr/lib/python3.5/site-packages/glib/ $VIRTUAL_ENV/lib/python3.5/site-packages/glib
 4. The service will be available at "/com/spoppy" (f.x. `qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
+
+# Testing
+
+1. Run `pip install nose`
+2. Run `nosetests` from the projects home path
