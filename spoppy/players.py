@@ -20,6 +20,7 @@ class Player(object):
     shuffle = False
     repeat = REPEAT_OPTIONS[0]
 
+    # Initialization and external helpers
     def __init__(self, navigator):
         self.navigator = navigator
         self._initialized = False
@@ -55,20 +56,6 @@ class Player(object):
                 key_names.get(key) or key.decode('utf-8')
             )
 
-    def has_been_loaded(self):
-        return bool(len(self.song_list))
-
-    def debug(self):
-        import pdb
-        pdb.set_trace()
-
-    def initialize(self):
-        if not self._initialized:
-            # For quicker access
-            self.session = self.navigator.session
-            self.player = self.session.player
-            self._initialized = True
-
     def clear(self):
         self.current_track_idx = 0
         self.current_track = None
@@ -83,8 +70,25 @@ class Player(object):
         self.song_list = []
         self._trigger_redraw = False
 
-    def trigger_redraw(self):
-        self._trigger_redraw = True
+    def has_been_loaded(self):
+        return bool(len(self.song_list))
+
+    def initialize(self):
+        if not self._initialized:
+            # For quicker access
+            self.session = self.navigator.session
+            self.player = self.session.player
+            self._initialized = True
+
+    def is_playing(self):
+        return self.player.state == 'playing'
+
+    # UI specific
+    def get_duration_from_s(self, s):
+        return '%s:%s' % (
+            str(int(s / 60)).zfill(2),
+            str(int(s % 60)).zfill(2)
+        )
 
     def get_help_ui(self):
         res = []
@@ -97,6 +101,51 @@ class Player(object):
                 )
             )
         return res
+
+    def get_progress(self):
+        seconds_played = self.seconds_played
+        if self.play_timestamp:
+            # We are actually playing and we have to calculate the number of
+            # seconds since we last pressed play
+            seconds_played += time.time() - self.play_timestamp
+
+        # pyspotify's duration is in ms
+        percent_played = (seconds_played * 1000) / self.current_track.duration
+        mins_played = self.get_duration_from_s(seconds_played)
+
+        return (
+            self.player.state,
+            mins_played,
+            percent_played,
+            self.current_track_duration
+        )
+
+    def get_response(self):
+        # This is actually our game loop... because fuck you that's why
+        response = NOOP
+        while response == NOOP:
+            self.session.process_events()
+            end_of_track_response = self.check_end_of_track()
+            if end_of_track_response:
+                return end_of_track_response
+            if self.current_track:
+                self.navigator.update_progress(*self.get_progress())
+            char = single_char_with_timeout(timeout=1.5)
+            if char:
+                logger.debug('Got some char: %s' % char)
+            response = self.actions.get(char, NOOP)
+            if response != NOOP:
+                if callable(response):
+                    evaluated_response = response()
+                    if evaluated_response:
+                        return evaluated_response
+                    # We have handled the response ourselves
+                    response = NOOP
+                else:
+                    return response
+            if self._trigger_redraw:
+                self._trigger_redraw = False
+                return NOOP
 
     def get_ui(self):
         res = []
@@ -174,6 +223,28 @@ class Player(object):
 
         return res
 
+    def trigger_redraw(self):
+        self._trigger_redraw = True
+
+    # Event handlers
+    def backward_10s(self):
+        if self.play_timestamp:
+            self.seconds_played += time.time() - self.play_timestamp
+            self.play_timestamp = time.time()
+        self.seconds_played -= 10
+        self.player.seek(int(self.seconds_played * 1000))
+
+    def debug(self):
+        import pdb
+        pdb.set_trace()
+
+    def forward_10s(self):
+        if self.play_timestamp:
+            self.seconds_played += time.time() - self.play_timestamp
+            self.play_timestamp = time.time()
+        self.seconds_played += 10
+        self.player.seek(int(self.seconds_played * 1000))
+
     def get_help(self):
         self.show_help = not self.show_help
         return NOOP
@@ -183,60 +254,20 @@ class Player(object):
         self.play_current_song()
         return NOOP
 
-    def get_next_idx(self):
-        current_track_idx = self.current_track_idx + 1
-        if current_track_idx >= len(self.song_order):
-            current_track_idx = 0
-        return current_track_idx
+    def play_pause(self):
+        if not self.is_playing():
+            self.player.play()
+            self.play_timestamp = time.time()
+        else:
+            self.player.pause()
+            self.seconds_played += time.time() - self.play_timestamp
+            self.play_timestamp = None
+        return NOOP
 
     def previous_song(self):
         self.current_track_idx = self.get_prev_idx()
         self.play_current_song()
         return NOOP
-
-    def get_prev_idx(self):
-        current_track_idx = self.current_track_idx - 1
-        if current_track_idx < 0:
-            current_track_idx = len(self.song_order) - 1
-        return current_track_idx
-
-    def toggle_shuffle(self):
-        # We also have to update the current_track_idx too here since
-        # the order is changing
-        self.shuffle = not self.shuffle
-        if self.current_track_idx <= len(self.song_order):
-            currently_playing = self.song_order[self.current_track_idx]
-        self.set_song_order_by_shuffle()
-        if currently_playing in self.song_order:
-            self.current_track_idx = self.song_order.index(currently_playing)
-        return NOOP
-
-    def set_song_order_by_shuffle(self):
-        self.song_order = list(range(len(self.song_list)))
-        if self.shuffle:
-            random.shuffle(self.song_order)
-
-    def toggle_repeat(self):
-        new_idx = self.REPEAT_OPTIONS.index(self.repeat) + 1
-        if new_idx >= len(self.REPEAT_OPTIONS):
-            new_idx = 0
-        self.repeat = self.REPEAT_OPTIONS[new_idx]
-        return NOOP
-
-    def is_playing(self):
-        return self.player.state == 'playing'
-
-    def add_to_queue(self, item):
-        if isinstance(item, spotify.Track):
-            # Add the newest track_idx to the song order
-            self.song_order.append(len(self.song_order))
-            # Add the song to the current song list
-            self.song_list.append(item)
-        elif isinstance(item, spotify.Playlist):
-            for track in item.tracks:
-                if track.availability != spotify.TrackAvailability.UNAVAILABLE:
-                    self.add_to_queue(track)
-        self.playlist = None
 
     def remove_current_song(self):
         idx_in_song_list = self.song_order[self.current_track_idx]
@@ -260,15 +291,56 @@ class Player(object):
         self.clear()
         return UP
 
-    def play_pause(self):
-        if not self.is_playing():
-            self.player.play()
-            self.play_timestamp = time.time()
-        else:
-            self.player.pause()
-            self.seconds_played += time.time() - self.play_timestamp
-            self.play_timestamp = None
+    def toggle_shuffle(self):
+        # We also have to update the current_track_idx too here since
+        # the order is changing
+        self.shuffle = not self.shuffle
+        if self.current_track_idx <= len(self.song_order):
+            currently_playing = self.song_order[self.current_track_idx]
+        self.set_song_order_by_shuffle()
+        if currently_playing in self.song_order:
+            self.current_track_idx = self.song_order.index(currently_playing)
         return NOOP
+
+    def toggle_repeat(self):
+        new_idx = self.REPEAT_OPTIONS.index(self.repeat) + 1
+        if new_idx >= len(self.REPEAT_OPTIONS):
+            new_idx = 0
+        self.repeat = self.REPEAT_OPTIONS[new_idx]
+        return NOOP
+
+    # Song handling
+    def add_to_queue(self, item):
+        if isinstance(item, spotify.Track):
+            # Add the newest track_idx to the song order
+            self.song_order.append(len(self.song_order))
+            # Add the song to the current song list
+            self.song_list.append(item)
+        elif isinstance(item, spotify.Playlist):
+            for track in item.tracks:
+                if track.availability != spotify.TrackAvailability.UNAVAILABLE:
+                    self.add_to_queue(track)
+        self.playlist = None
+
+    def check_end_of_track(self):
+        if self.end_of_track and self.end_of_track.is_set():
+            if self.repeat == 'all':
+                self.next_song()
+                return NOOP
+            elif self.repeat == 'one':
+                self.play_current_song()
+
+    def get_next_idx(self):
+        current_track_idx = self.current_track_idx + 1
+        if current_track_idx >= len(self.song_order):
+            current_track_idx = 0
+        return current_track_idx
+
+    def get_prev_idx(self):
+        current_track_idx = self.current_track_idx - 1
+        if current_track_idx < 0:
+            current_track_idx = len(self.song_order) - 1
+        return current_track_idx
 
     def get_track_by_idx(self, idx):
         try:
@@ -289,27 +361,9 @@ class Player(object):
             self.shuffle = shuffle
         self.set_song_order_by_shuffle()
 
-    def play_track(self, track_idx):
-        self.current_track_idx = self.song_order.index(track_idx)
-        self.play_current_song()
-
     def on_end_of_track(self, session):
         self.end_of_track.set()
         _thread.interrupt_main()
-
-    def backward_10s(self):
-        if self.play_timestamp:
-            self.seconds_played += time.time() - self.play_timestamp
-            self.play_timestamp = time.time()
-        self.seconds_played -= 10
-        self.player.seek(int(self.seconds_played * 1000))
-
-    def forward_10s(self):
-        if self.play_timestamp:
-            self.seconds_played += time.time() - self.play_timestamp
-            self.play_timestamp = time.time()
-        self.seconds_played += 10
-        self.player.seek(int(self.seconds_played * 1000))
 
     def play_current_song(self):
         self.player.unload()
@@ -338,61 +392,11 @@ class Player(object):
             self.on_end_of_track
         )
 
-    def check_end_of_track(self):
-        if self.end_of_track and self.end_of_track.is_set():
-            if self.repeat == 'all':
-                self.next_song()
-                return NOOP
-            elif self.repeat == 'one':
-                self.play_current_song()
+    def play_track(self, track_idx):
+        self.current_track_idx = self.song_order.index(track_idx)
+        self.play_current_song()
 
-    def get_response(self):
-        # This is actually our game loop... because fuck you that's why
-        response = NOOP
-        while response == NOOP:
-            self.session.process_events()
-            end_of_track_response = self.check_end_of_track()
-            if end_of_track_response:
-                return end_of_track_response
-            if self.current_track:
-                self.navigator.update_progress(*self.get_progress())
-            char = single_char_with_timeout(timeout=1.5)
-            if char:
-                logger.debug('Got some char: %s' % char)
-            response = self.actions.get(char, NOOP)
-            if response != NOOP:
-                if callable(response):
-                    evaluated_response = response()
-                    if evaluated_response:
-                        return evaluated_response
-                    # We have handled the response ourselves
-                    response = NOOP
-                else:
-                    return response
-            if self._trigger_redraw:
-                self._trigger_redraw = False
-                return NOOP
-
-    def get_progress(self):
-        seconds_played = self.seconds_played
-        if self.play_timestamp:
-            # We are actually playing and we have to calculate the number of
-            # seconds since we last pressed play
-            seconds_played += time.time() - self.play_timestamp
-
-        # pyspotify's duration is in ms
-        percent_played = (seconds_played * 1000) / self.current_track.duration
-        mins_played = self.get_duration_from_s(seconds_played)
-
-        return (
-            self.player.state,
-            mins_played,
-            percent_played,
-            self.current_track_duration
-        )
-
-    def get_duration_from_s(self, s):
-        return '%s:%s' % (
-            str(int(s / 60)).zfill(2),
-            str(int(s % 60)).zfill(2)
-        )
+    def set_song_order_by_shuffle(self):
+        self.song_order = list(range(len(self.song_list)))
+        if self.shuffle:
+            random.shuffle(self.song_order)
