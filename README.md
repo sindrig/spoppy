@@ -35,4 +35,4 @@ You will need a Spotify Premium account.
 # Testing
 
 1. Run `pip install nose`
-2. Run `nosetests` from the projects home path
+2. Run `make test` from the projects home path
