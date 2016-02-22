@@ -113,6 +113,14 @@ class Player(object):
         :param s: Seconds in int/float
         :returns: s formatted as "%M:%S"
         '''
+        # Max length is 59 minutes, 59 seconds
+        MAX_LENGTH = 59 * 60 + 59
+        if not isinstance(s, (int, float)):
+            raise TypeError('Seconds must be int/float')
+        elif s < 0:
+            raise TypeError('Seconds must be positive')
+        elif s > MAX_LENGTH:
+            s = MAX_LENGTH
         return '%s:%s' % (
             str(int(s / 60)).zfill(2),
             str(int(s % 60)).zfill(2)
