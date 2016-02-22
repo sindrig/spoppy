@@ -73,7 +73,6 @@ class Player(object):
         self.song_order = []
         self.current_track_duration = ''
         self.repeat = self.REPEAT_OPTIONS[0]
-        self.shuffle = False
         self.show_help = False
         self.playlist = None
         self.song_list = []
@@ -151,7 +150,7 @@ class Player(object):
                                  current_track_duration)
         '''
         seconds_played = self.seconds_played
-        if self.play_timestamp:
+        if self.play_timestamp is not None:
             # We are actually playing and we have to calculate the number of
             # seconds since we last pressed play
             seconds_played += time.time() - self.play_timestamp
@@ -295,10 +294,12 @@ class Player(object):
         Seeks the current song 10 seconds back
         :returns: None
         '''
-        if self.play_timestamp:
+        if self.play_timestamp is not None:
             self.seconds_played += time.time() - self.play_timestamp
             self.play_timestamp = time.time()
         self.seconds_played -= 10
+        if self.seconds_played < 0:
+            self.seconds_played = 0
         self.player.seek(int(self.seconds_played * 1000))
 
     def debug(self):
@@ -314,7 +315,7 @@ class Player(object):
         Seeks the current song 10 seconds forward
         :returns: None
         '''
-        if self.play_timestamp:
+        if self.play_timestamp is not None:
             self.seconds_played += time.time() - self.play_timestamp
             self.play_timestamp = time.time()
         self.seconds_played += 10
@@ -366,20 +367,21 @@ class Player(object):
         removed from the playlist itself.
         :returns: responses.NOOP
         '''
-        idx_in_song_list = self.song_order[self.current_track_idx]
-        del self.song_order[self.current_track_idx]
+        if self.current_track_idx < len(self.song_order):
+            idx_in_song_list = self.song_order[self.current_track_idx]
+            del self.song_order[self.current_track_idx]
 
-        del self.song_list[idx_in_song_list]
+            del self.song_list[idx_in_song_list]
 
-        for idx, item in enumerate(self.song_order):
-            if item > idx_in_song_list:
-                self.song_order[idx] -= 1
+            for idx, item in enumerate(self.song_order):
+                if item > idx_in_song_list:
+                    self.song_order[idx] -= 1
 
-        if self.current_track_idx >= len(self.song_order):
-            self.previous_song()
-        else:
+            if self.current_track_idx >= len(self.song_order):
+                self.current_track_idx = 0
+
             self.play_current_song()
-        self.playlist = None
+            self.playlist = None
         return NOOP
 
     def stop_and_clear(self):
@@ -400,7 +402,8 @@ class Player(object):
         # We also have to update the current_track_idx too here since
         # the order is changing
         self.shuffle = not self.shuffle
-        if self.current_track_idx <= len(self.song_order):
+        currently_playing = None
+        if self.current_track_idx < len(self.song_order):
             currently_playing = self.song_order[self.current_track_idx]
         self.set_song_order_by_shuffle()
         if currently_playing in self.song_order:
@@ -455,6 +458,8 @@ class Player(object):
         the first one.
         :returns: The id of the next song in queue.
         '''
+        if not self.song_order:
+            raise RuntimeError('No songs currently in queue')
         current_track_idx = self.current_track_idx + 1
         if current_track_idx >= len(self.song_order):
             current_track_idx = 0
@@ -466,6 +471,8 @@ class Player(object):
         returns the last one.
         :returns: The id of the previous song in queue.
         '''
+        if not self.song_order:
+            raise RuntimeError('No songs currently in queue')
         current_track_idx = self.current_track_idx - 1
         if current_track_idx < 0:
             current_track_idx = len(self.song_order) - 1
@@ -507,11 +514,11 @@ class Player(object):
             self.shuffle = shuffle
         self.set_song_order_by_shuffle()
 
-    def on_end_of_track(self, session):
+    def on_end_of_track(self, session=None):
         '''
         Sets the end of track event and signals the player something has
         happened.
-        :param session: A `spotify.Session`
+        :param session: A `spotify.Session` (optional, not used)
         :returns: None
         '''
         self.end_of_track.set()
@@ -523,12 +530,13 @@ class Player(object):
         :returns: None
         '''
         self.player.unload()
-        self.end_of_track = threading.Event()
 
         current_track = self.get_track_by_idx(self.current_track_idx)
         if not current_track:
             self.current_track = None
             return
+
+        self.end_of_track = threading.Event()
         self.current_track = current_track.load()
 
         self.current_track_duration = self.get_duration_from_s(
@@ -550,7 +558,8 @@ class Player(object):
 
     def play_track(self, track_idx):
         '''
-        Plays the track that's number `track_idx` in the song list
+        Plays the track that's number `track_idx` in the song list (note, not
+        the song order)
         :param track_idx: The position of the desired track to play
         :returns: None
         '''
