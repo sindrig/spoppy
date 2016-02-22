@@ -4,7 +4,9 @@ Spotify CLI
 # Requirements
 
 See requirements.txt
+
 You will need libspotify, libffi-dev and libasound2-dev installed. Use your distribution's package manager.
+
 You will need a Spotify Premium account.
 
 # Development
@@ -33,5 +35,5 @@ You will need a Spotify Premium account.
 
 # Testing
 
-1. Run `pip install nose`
+1. Run `pip install nose coverage`
 2. Run `make test` from the projects home path
