@@ -4,3 +4,6 @@ install_dbus: clean
 
 clean:
 	rm -rf .tmp
+
+test:
+	nosetests -s --with-coverage --cover-package=spoppy
