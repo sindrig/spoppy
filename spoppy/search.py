@@ -42,20 +42,25 @@ class Search(threading.Thread):
 
     def run(self):
         # For now we only search for tracks
-        r = requests.get(
-            self.BASE_URL + self.ENDPOINTS['track'].format(query=self.query)
-        )
-        r.raise_for_status()
-        self.tracks = [
-            Track(self.session, track['uri'])
-            for track in r.json()['tracks']['items']
-        ]
-        self.tracks = [
-            track for track in self.tracks if
-            track.availability != TrackAvailability.UNAVAILABLE
-        ]
-        for track in self.tracks:
-            track.load()
-        for track in self.tracks:
-            logger.debug(track.is_loaded)
+        try:
+            r = requests.get(
+                self.BASE_URL +
+                self.ENDPOINTS['track'].format(query=self.query)
+            )
+        except requests.exceptions.ConnectionError:
+            self.tracks = []
+        else:
+            r.raise_for_status()
+            self.tracks = [
+                Track(self.session, track['uri'])
+                for track in r.json()['tracks']['items']
+            ]
+            self.tracks = [
+                track for track in self.tracks if
+                track.availability != TrackAvailability.UNAVAILABLE
+            ]
+            for track in self.tracks:
+                track.load()
+            for track in self.tracks:
+                logger.debug(track.is_loaded)
         self.loaded_event.set()
