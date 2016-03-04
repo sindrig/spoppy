@@ -23,6 +23,7 @@ class LifeCycle(object):
         self.username = username
         self.password = password
         self._pyspotify_session = None
+        self._pyspotify_session_loop = None
         self.service_stop_event = threading.Event()
         self.services = [
             DBusListener(self, self.service_stop_event),
@@ -45,11 +46,14 @@ class LifeCycle(object):
         self.service_stop_event.set()
         while self.services:
             logger.debug('Joining %s' % self.services[0])
-            self.services[0].join(0.5)
+            if self.services[0].is_alive():
+                # Give it half a second to die
+                self.services[0].join(0.5)
             if not self.services[0].is_alive():
                 del self.services[0]
         logger.debug('All services joined')
-        self._pyspotify_session_loop.stop()
+        if self._pyspotify_session_loop:
+            self._pyspotify_session_loop.stop()
         logger.debug('Pyspotify session loop stopped')
 
     def get_pyspotify_client(self):

@@ -62,3 +62,6 @@ target/
 .ipynb_checkpoints
 
 tmp/
+
+# added by GitSavvy
+/venv/
