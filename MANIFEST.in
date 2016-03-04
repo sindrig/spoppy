@@ -1,0 +1,9 @@
+include *.md
+include *.sh
+include *.txt
+include Makefile
+include LICENCE
+include MANIFEST.in
+include spoppy/spotify_appkey.key
+
+recursive-include tests *.py

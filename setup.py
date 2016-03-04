@@ -26,6 +26,7 @@ setup(
     test_suite='nose.collector',
     install_requires=required,
     include_package_data=True,
+    zip_safe=False,
     scripts=[
         'scripts/spoppy'
     ]
