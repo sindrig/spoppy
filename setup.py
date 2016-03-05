@@ -16,12 +16,12 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 setup(
-    name='Spoppy',
+    name='spoppy',
     version=get_version(),
     description='A lightweight spotify CLI',
     author='Sindri Guðmundsson',
     author_email='sindrigudmundsson@gmail.com',
-    url='https://irdn.is/',
+    url='https://github.com/sindrig/spoppy',
     packages=['spoppy'],
     test_suite='nose.collector',
     install_requires=required,
