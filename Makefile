@@ -7,3 +7,6 @@ clean:
 
 test:
 	nosetests -s --with-coverage --cover-package=spoppy
+
+upload:
+	python setup.py sdist upload -r pypi
