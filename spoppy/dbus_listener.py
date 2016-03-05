@@ -29,66 +29,66 @@ except ImportError:
         'player via DBus'
     )
 
+if dbus:
+    class SpoppyDBusService(DBusServiceObject):
 
-class SpoppyDBusService(DBusServiceObject):
+        def __init__(self, lifecycle):
+            self.lifecycle = lifecycle
 
-    def __init__(self, lifecycle):
-        self.lifecycle = lifecycle
+        def run(self):
+            gobject.threads_init()
+            dbus.mainloop.glib.threads_init()
+            dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+            bus_name = dbus.service.BusName(
+                "com.spoppy",
+                dbus.SessionBus()
+            )
+            super(SpoppyDBusService, self).__init__(
+                bus_name, "/com/spoppy"
+            )
 
-    def run(self):
-        gobject.threads_init()
-        dbus.mainloop.glib.threads_init()
-        dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-        bus_name = dbus.service.BusName(
+            self._loop = gobject.MainLoop()
+            self._loop.run()
+
+        def stop(self):
+            self._loop.quit()
+
+        @dbus.service.method(
             "com.spoppy",
-            dbus.SessionBus()
+            in_signature='', out_signature='b'
         )
-        super(SpoppyDBusService, self).__init__(
-            bus_name, "/com/spoppy"
+        def PlayPause(self):
+            self.lifecycle.player.play_pause()
+            return True
+
+        @dbus.service.method(
+            "com.spoppy",
+            in_signature='', out_signature='s'
         )
-
-        self._loop = gobject.MainLoop()
-        self._loop.run()
-
-    def stop(self):
-        self._loop.quit()
-
-    @dbus.service.method(
-        "com.spoppy",
-        in_signature='', out_signature='b'
-    )
-    def PlayPause(self):
-        self.lifecycle.player.play_pause()
-        return True
-
-    @dbus.service.method(
-        "com.spoppy",
-        in_signature='', out_signature='s'
-    )
-    def Previous(self):
-        self.lifecycle.player.previous_song()
-        self.lifecycle.player.trigger_redraw()
-        _thread.interrupt_main()
-        return format_track(self.lifecycle.player.current_track)
-
-    @dbus.service.method(
-        "com.spoppy",
-        in_signature='', out_signature='s'
-    )
-    def Next(self):
-        self.lifecycle.player.next_song()
-        self.lifecycle.player.trigger_redraw()
-        _thread.interrupt_main()
-        return format_track(self.lifecycle.player.current_track)
-
-    @dbus.service.method(
-        "com.spoppy",
-        in_signature='', out_signature='s'
-    )
-    def Current(self):
-        if self.lifecycle.player.current_track:
+        def Previous(self):
+            self.lifecycle.player.previous_song()
+            self.lifecycle.player.trigger_redraw()
+            _thread.interrupt_main()
             return format_track(self.lifecycle.player.current_track)
-        return ''
+
+        @dbus.service.method(
+            "com.spoppy",
+            in_signature='', out_signature='s'
+        )
+        def Next(self):
+            self.lifecycle.player.next_song()
+            self.lifecycle.player.trigger_redraw()
+            _thread.interrupt_main()
+            return format_track(self.lifecycle.player.current_track)
+
+        @dbus.service.method(
+            "com.spoppy",
+            in_signature='', out_signature='s'
+        )
+        def Current(self):
+            if self.lifecycle.player.current_track:
+                return format_track(self.lifecycle.player.current_track)
+            return ''
 
 
 class DBusListener(threading.Thread):

@@ -1,15 +1,25 @@
 # spoppy
-Spotify CLI
+Lightweight Spotify Command-Line interface for Linux
 
 # Requirements
 
-See requirements.txt
-
-You will need libspotify, libffi-dev and libasound2-dev installed. Use your distribution's package manager.
+See requirements.txt for required python packages.
 
 You will need a Spotify Premium account.
 
+You will need libspotify, libffi-dev and libasound2-dev installed. Use your distribution's package manager.
+
+For DBust integration you'll need python-dbus and python-gobject2. Use your distribution's package manager. Spoppy will work without these packages but won't expose it's DBus procedures.
+
+# Installation
+
+`python setup.py install`
+
+To install globally you will probably need superuser privileges.
+
 # Development
+
+NOTE: This is kind of broken at the moment, see issue #60
 
 1. Create python3.4+ virtualenv
 2. (optional) Create an ENV file containing these values:
@@ -33,5 +43,4 @@ You will need a Spotify Premium account.
 
 # Testing
 
-1. Run `pip install nose coverage`
-2. Run `make test` from the projects home path
+`python setup.py test`

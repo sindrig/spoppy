@@ -6,6 +6,7 @@ from . import get_version, menus, responses
 from .lifecycle import LifeCycle
 from .players import Player
 from .terminal import get_terminal_size
+from .config import clear_config
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class Leifur(object):
                 'Could not log you in, please check your username (%s) '
                 'and password are correct' % self.username
             )
+            clear_config()
             logger.debug('Something went wrong, not logged in...')
 
     def shutdown(self):
