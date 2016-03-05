@@ -13,9 +13,11 @@ For DBust integration you'll need python-dbus and python-gobject2. Use your dist
 
 # Installation
 
-`python setup.py install`
+`pip install spoppy`
 
 To install globally you will probably need superuser privileges.
+
+After installation run `spoppy` in your terminal and you're all set!
 
 # Development
 
