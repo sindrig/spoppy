@@ -1,7 +1,9 @@
-# spoppy
+spoppy
+======
 Lightweight Spotify Command-Line interface for Linux
 
-# Requirements
+Requirements
+============
 
 See requirements.txt for required python packages.
 
@@ -11,38 +13,48 @@ You will need libspotify, libffi-dev and libasound2-dev installed. Use your dist
 
 For DBust integration you'll need python-dbus and python-gobject2. Use your distribution's package manager. Spoppy will work without these packages but won't expose it's DBus procedures.
 
-# Installation
+Installation
+============
 
-`pip install spoppy`
+:code:`pip install spoppy`
 
 To install globally you will probably need superuser privileges.
 
-After installation run `spoppy` in your terminal and you're all set!
+After installation run :code:`spoppy` in your terminal and you're all set!
 
-# Development
+Development
+===========
 
 NOTE: This is kind of broken at the moment, see issue #60
 
-1. Create python3.4+ virtualenv
-2. (optional) Create an ENV file containing these values:
+#. Create python3.4+ virtualenv
+#. (optional) Create an ENV file containing these values:
+
   * export SPOPPY_USERNAME=your-username
   * export SPOPPY_PASSWORD=hunter2
-3. Clone this project
-4. Activate your virtualenv
-5. (if you did #2) Source your ENV file
-6. Install requirements
+
+#. Clone this project
+#. Activate your virtualenv
+#. (if you did #2) Source your ENV file
+#. Install requirements
+
   * pip install -r requirements.txt
-7. Run `python spoppy.py` (if you did not create an ENV file you can run `python spoppy.py USERNAME PASSWORD`)
 
-# DBus integration
+#. Run :code:`python spoppy.py` (if you did not create an ENV file you can run :code:`python spoppy.py USERNAME PASSWORD`)
 
-1. Run `make install_dbus`
-2. Make sure you have python-gobject2 installed
-3. Symlink gobject (and possibly glib) to your virtualenv
+DBus integration
+================
+
+3. Run `make install_dbus`
+#. Make sure you have python-gobject2 installed
+#. Symlink gobject (and possibly glib) to your virtualenv
+
   * ln -s /usr/lib/python3.5/site-packages/gobject/ $VIRTUAL_ENV/lib/python3.5/site-packages/gobject
   * ln -s /usr/lib/python3.5/site-packages/glib/ $VIRTUAL_ENV/lib/python3.5/site-packages/glib
-4. The service will be available at "/com/spoppy" (f.x. `qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
 
-# Testing
+#. The service will be available at "/com/spoppy" (f.x. :code:`qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
 
-`python setup.py test`
+Testing
+=======
+
+:code:`python setup.py test`
