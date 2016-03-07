@@ -2,13 +2,15 @@ import logging
 from collections import namedtuple
 
 from spotify import TrackAvailability
-
+from .search import search
 from . import responses
-from .util import format_track, single_char_with_timeout, sorted_menu_items
+from .util import (format_album, format_track, single_char_with_timeout,
+                   sorted_menu_items)
 
 logger = logging.getLogger(__name__)
 
 MenuValue = namedtuple('MenuValue', ('name', 'destination'))
+MockPlaylist = namedtuple('Playlist', ('name', 'tracks'))
 
 
 class Options(dict):
@@ -196,20 +198,30 @@ class MainMenu(Menu):
             'vp': MenuValue(
                 'View playlists', PlayListOverview(self.navigator)
             ),
-            's': MenuValue('Search', Search(self.navigator))
+            'st': MenuValue('Search for tracks', TrackSearch(self.navigator)),
+            'sa': MenuValue('Search for albums', AlbumSearch(self.navigator)),
         }
 
 
 class PlayListOverview(Menu):
 
     def get_options(self):
+        def include_playlist(playlist):
+            return (
+                playlist.name and
+                hasattr(playlist, 'link') and
+                any([
+                    track for track in playlist.tracks
+                    if track.availability != TrackAvailability.UNAVAILABLE
+                ])
+            )
         results = {}
         playlists = self.navigator.session.playlist_container
         playlists = enumerate(
             sorted(
                 (
                     playlist for playlist in playlists
-                    if playlist.name and hasattr(playlist, 'link')
+                    if include_playlist(playlist)
                 ),
                 key=lambda x: x.name
             )
@@ -226,20 +238,125 @@ class PlayListOverview(Menu):
         return 'Select a playlist'
 
 
-class Search(Menu):
+class TrackSearchResults(Menu):
+    search = None
+    paginating = False
+
+    def get_response(self):
+        if self.paginating:
+            self.search.loaded_event.wait()
+            self.paginating = False
+            return self
+        return super(TrackSearchResults, self).get_response()
+
+    def go_to(self, destination):
+        def inner():
+            self.search = search(
+                self.navigator.session, self.search.query,
+                search_type=self.search.search_type,
+                direct_endpoint=getattr(
+                    self.search.results, destination
+                )
+            )
+            self.paginating = True
+            return self
+        return inner
+
+    def select_song(self, track_idx):
+        def song_selected():
+            track = self.search.results[track_idx]
+            if self.navigator.player.is_playing():
+                # If the user is currently playing we want him to have the
+                # choice to add this song to the list of current songs or
+                # start playing this playlist from this song
+                menu = SongSelectedWhilePlaying(self.navigator)
+                menu.track = track
+                return menu
+            else:
+                self.navigator.player.clear()
+                self.navigator.player.add_to_queue(track)
+                self.navigator.player.play_track(0)
+                return self.navigator.player
+        return song_selected
+
+    def get_header(self):
+        return 'Search results for %s (total %d results)' % (
+            self.search.results.term, self.search.results.total
+        )
+
+    def get_res_idx(self, i):
+        return i + 1 + self.search.results.offset
+
+    def get_ui(self):
+        if self.paginating:
+            return 'Loading...'
+        return super(TrackSearchResults, self).get_ui()
+
+    def get_options(self):
+        if self.paginating:
+            return {}
+        results = self.get_options_from_search()
+        if self.search.results.previous_page:
+            results['p'] = MenuValue(
+                'Previous', self.go_to('previous_page')
+            )
+        if self.search.results.next_page:
+            results['n'] = MenuValue(
+                'Next', self.go_to('next_page')
+            )
+        return results
+
+    def get_options_from_search(self):
+        results = {}
+        for i, track in enumerate(
+            track for track in
+            self.search.results
+            if track.availability != TrackAvailability.UNAVAILABLE
+        ):
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
+                format_track(track), self.select_song(i)
+            )
+        return results
+
+
+class AlbumSearchResults(TrackSearchResults):
+    search = None
+
+    def select_album(self, track_idx):
+        def album_selected():
+            res = AlbumSelected(self.navigator)
+            res.album = self.search.results[track_idx]
+            return res
+        return album_selected
+
+    def get_options_from_search(self):
+        results = {}
+        for i, album in enumerate(
+            album for album in
+            self.search.results
+        ):
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
+                format_album(album), self.select_album(i)
+            )
+        return results
+
+
+class TrackSearch(Menu):
     is_searching = False
     search_pattern = ''
     search = None
+    search_type = 'tracks'
+    result_cls = TrackSearchResults
 
     def get_options(self):
         return {}
 
     def get_search_results(self):
         self.search_pattern = self.filter
-        # TODO: Hopefully remove this sometime...
-        from .search import search
-        self.search = search(self.navigator.session, self.search_pattern)
-        # self.search = self.navigator.session.search(self.search_pattern)
+        self.search = search(
+            self.navigator.session, self.search_pattern,
+            search_type=self.search_type
+        )
         self.is_searching = True
         return self
 
@@ -248,7 +365,7 @@ class Search(Menu):
             self.search.loaded_event.wait()
             self.is_searching = False
 
-            search_results = SearchResults(self.navigator)
+            search_results = self.result_cls(self.navigator)
             search_results.search = self.search
 
             self.is_searching = False
@@ -256,10 +373,10 @@ class Search(Menu):
             self.search = None
 
             return search_results
-        return super(Search, self).get_response()
+        return super(TrackSearch, self).get_response()
 
     def is_valid_response(self):
-        return super(Search, self).is_valid_response() or MenuValue(
+        return super(TrackSearch, self).is_valid_response() or MenuValue(
             None, self.get_search_results
         )
 
@@ -275,37 +392,9 @@ class Search(Menu):
             ))
 
 
-class SearchResults(Menu):
-    search = None
-
-    def select_song(self, track_idx):
-        def song_selected():
-            track = self.search.tracks[track_idx]
-            if self.navigator.player.is_playing():
-                # If the user is currently playing we want him to have the
-                # choice to add this song to the list of current songs or
-                # start playing this playlist from this song
-                menu = SongSelectedWhilePlaying(self.navigator)
-                menu.track = track
-                return menu
-            else:
-                self.navigator.player.clear()
-                self.navigator.player.add_to_queue(track)
-                self.navigator.player.play_track(0)
-                return self.navigator.player
-        return song_selected
-
-    def get_options(self):
-        results = {}
-        for i, track in enumerate(
-            track for track in
-            self.search.tracks
-            if track.availability != TrackAvailability.UNAVAILABLE
-        ):
-            results[str(i+1).rjust(4)] = MenuValue(
-                format_track(track), self.select_song(i)
-            )
-        return results
+class AlbumSearch(TrackSearch):
+    search_type = 'albums'
+    result_cls = AlbumSearchResults
 
 
 class PlayListSelected(Menu):
@@ -327,7 +416,7 @@ class PlayListSelected(Menu):
                 # start playing this playlist from this song
                 menu = SongSelectedWhilePlaying(self.navigator)
                 menu.playlist = self.playlist
-                menu.track = self.playlist.tracks[track_idx]
+                menu.track = self.get_tracks()[track_idx]
                 return menu
             else:
                 self.navigator.player.load_playlist(
@@ -341,11 +430,17 @@ class PlayListSelected(Menu):
         self.navigator.player.add_to_queue(self.playlist)
         return self.navigator.player
 
+    def get_tracks(self):
+        return self.playlist.tracks
+
+    def get_name(self):
+        return self.playlist.name
+
     def get_options(self):
         results = {}
         for i, track in enumerate(
             track for track in
-            self.playlist.tracks
+            self.get_tracks()
             if track.availability != TrackAvailability.UNAVAILABLE
         ):
             results[str(i+1).rjust(4)] = MenuValue(
@@ -355,7 +450,7 @@ class PlayListSelected(Menu):
             results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
             if self.navigator.player.is_playing():
                 results['add_to_queue'] = MenuValue(
-                    'Add %s to queue' % self.playlist.name,
+                    'Add %s to queue' % self.get_name(),
                     self.add_to_queue
                 )
         else:
@@ -364,7 +459,27 @@ class PlayListSelected(Menu):
         return results
 
     def get_header(self):
-        return 'Playlist [%s] selected' % self.playlist.name
+        return 'Playlist [%s] selected' % self.get_name()
+
+
+class AlbumSelected(PlayListSelected):
+    album = None
+    _tracks = None
+
+    def initialize(self):
+        super(AlbumSelected, self).initialize()
+        self.playlist = MockPlaylist(self.get_name(), self.get_tracks())
+
+    def get_tracks(self):
+        if not self._tracks:
+            self._tracks = self.album.tracks
+        return self._tracks
+
+    def get_name(self):
+        return format_album(self.album)
+
+    def get_header(self):
+        return 'Album [%s] selected' % self.get_name()
 
 
 class SongSelectedWhilePlaying(Menu):

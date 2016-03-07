@@ -53,6 +53,14 @@ def format_track(track):
     )
 
 
+def format_album(album):
+    return '%s by %s [%s]' % (
+        album.album.name,
+        album.artist.name,
+        album.album.year
+    )
+
+
 def sorted_menu_items(items):
     global_items = []
     for key, value in sorted(items):

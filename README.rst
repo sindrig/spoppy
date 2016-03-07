@@ -25,22 +25,14 @@ After installation run :code:`spoppy` in your terminal and you're all set!
 Development
 =============
 
-NOTE: This is kind of broken at the moment, see issue #60
-
 1. Create python3.4+ virtualenv
-2. (optional) Create an ENV file containing these values:
-
-  * export SPOPPY_USERNAME=your-username
-  * export SPOPPY_PASSWORD=hunter2
-
-3. Clone this project
-4. Activate your virtualenv
-5. (if you did #2) Source your ENV file
-6. Install requirements
+2. Clone this project
+3. Activate your virtualenv
+4. Install requirements
 
   * pip install -r requirements.txt
 
-7. Run :code:`python spoppy.py` (if you did not create an ENV file you can run :code:`python spoppy.py USERNAME PASSWORD`)
+5. Run :code:`python scripts/spoppy` (you will be asked for username/password)
 
 DBus integration
 ==================
