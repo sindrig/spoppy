@@ -5,7 +5,6 @@ try:
 except ImportError:
     import sys
     import os
-    # import pdb; pdb.set_trace()
     sys.path.append(os.path.abspath('.'))
     from spoppy import main
 
