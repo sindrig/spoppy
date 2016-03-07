@@ -360,9 +360,9 @@ class TestSubMenus(unittest.TestCase):
 
     def test_playlist_overview_shows_all_playlists(self):
         self.playlists = [
-            utils.Playlist('A', []),
-            utils.Playlist('B', []),
-            utils.Playlist('C', []),
+            utils.Playlist('A', [utils.Track('foo', ['bar'])]),
+            utils.Playlist('B', [utils.Track('foo', ['bar'])]),
+            utils.Playlist('C', [utils.Track('foo', ['bar'])]),
         ]
 
         class Session(object):
@@ -381,8 +381,13 @@ class TestSubMenus(unittest.TestCase):
 
     def test_playlist_overview_does_not_show_invalid_playlists(self):
         self.playlists = [
-            utils.Playlist('A', []),
+            # This is the only one that should be shown
+            utils.Playlist('A', [utils.Track('foo', ['bar'])]),
             utils.Playlist('B', []),
+            utils.Playlist(
+                'C', [utils.Track('foo', ['bar'], available=False)]
+            ),
+            utils.Playlist('D', []),
             utils.Playlist('', []),
         ]
         del self.playlists[1].link

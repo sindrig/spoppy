@@ -433,7 +433,7 @@ class Player(object):
             self.song_order.append(len(self.song_order))
             # Add the song to the current song list
             self.song_list.append(item)
-        elif isinstance(item, spotify.Playlist):
+        elif hasattr(item, 'tracks'):
             for track in item.tracks:
                 if track.availability != spotify.TrackAvailability.UNAVAILABLE:
                     self.add_to_queue(track)

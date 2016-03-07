@@ -8,6 +8,7 @@ import threading
 
 import requests
 from spotify.track import Track, TrackAvailability
+from spotify.album import Album
 
 logger = logging.getLogger(__name__)
 
@@ -35,32 +36,42 @@ class Search(threading.Thread):
                  sp_search=None, add_ref=True):
         self.session = session
         self.query = query
+        self.search_type = search_type
         self.loaded_event = threading.Event()
         super(Search, self).__init__()
 
         self.start()
 
     def run(self):
-        # For now we only search for tracks
         try:
             r = requests.get(
                 self.BASE_URL +
-                self.ENDPOINTS['track'].format(query=self.query)
+                self.ENDPOINTS[self.search_type].format(query=self.query)
             )
         except requests.exceptions.ConnectionError:
-            self.tracks = []
+            self.search_results = []
         else:
             r.raise_for_status()
-            self.tracks = [
-                Track(self.session, track['uri'])
-                for track in r.json()['tracks']['items']
-            ]
-            self.tracks = [
-                track for track in self.tracks if
-                track.availability != TrackAvailability.UNAVAILABLE
-            ]
-            for track in self.tracks:
-                track.load()
-            for track in self.tracks:
-                logger.debug(track.is_loaded)
+            response_json = r.json()
+            if 'tracks' in response_json:
+                self.search_results = [
+                    Track(self.session, track['uri'])
+                    for track in response_json['tracks']['items']
+                ]
+                self.search_results = [
+                    track for track in self.search_results if
+                    track.availability != TrackAvailability.UNAVAILABLE
+                ]
+                for item in self.search_results:
+                    item.load()
+            elif 'albums' in response_json:
+                self.search_results = [
+                    Album(self.session, album['uri'])
+                    for album in response_json['albums']['items']
+                ]
+                for item in self.search_results:
+                    # Not my fault....
+                    # See: https://github.com/mopidy/pyspotify/issues/119
+                    item.browse().load()
+
         self.loaded_event.set()
