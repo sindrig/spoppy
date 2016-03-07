@@ -55,9 +55,9 @@ def format_track(track):
 
 def format_album(album):
     return '%s by %s [%s]' % (
-        album.name,
+        album.album.name,
         album.artist.name,
-        album.year
+        album.album.year
     )
 
 

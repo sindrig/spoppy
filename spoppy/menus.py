@@ -2,7 +2,7 @@ import logging
 from collections import namedtuple
 
 from spotify import TrackAvailability
-
+from .search import search
 from . import responses
 from .util import (format_album, format_track, single_char_with_timeout,
                    sorted_menu_items)
@@ -240,10 +240,31 @@ class PlayListOverview(Menu):
 
 class TrackSearchResults(Menu):
     search = None
+    paginating = False
+
+    def get_response(self):
+        if self.paginating:
+            self.search.loaded_event.wait()
+            self.paginating = False
+            return self
+        return super(TrackSearchResults, self).get_response()
+
+    def go_to(self, destination):
+        def inner():
+            self.search = search(
+                self.navigator.session, self.search.query,
+                search_type=self.search.search_type,
+                direct_endpoint=getattr(
+                    self.search.results, destination
+                )
+            )
+            self.paginating = True
+            return self
+        return inner
 
     def select_song(self, track_idx):
         def song_selected():
-            track = self.search.search_results[track_idx]
+            track = self.search.results[track_idx]
             if self.navigator.player.is_playing():
                 # If the user is currently playing we want him to have the
                 # choice to add this song to the list of current songs or
@@ -258,36 +279,63 @@ class TrackSearchResults(Menu):
                 return self.navigator.player
         return song_selected
 
+    def get_header(self):
+        return 'Search results for %s (total %d results)' % (
+            self.search.results.term, self.search.results.total
+        )
+
+    def get_res_idx(self, i):
+        return i + 1 + self.search.results.offset
+
+    def get_ui(self):
+        if self.paginating:
+            return 'Loading...'
+        return super(TrackSearchResults, self).get_ui()
+
     def get_options(self):
+        if self.paginating:
+            return {}
+        results = self.get_options_from_search()
+        if self.search.results.previous_page:
+            results['p'] = MenuValue(
+                'Previous', self.go_to('previous_page')
+            )
+        if self.search.results.next_page:
+            results['n'] = MenuValue(
+                'Next', self.go_to('next_page')
+            )
+        return results
+
+    def get_options_from_search(self):
         results = {}
         for i, track in enumerate(
             track for track in
-            self.search.search_results
+            self.search.results
             if track.availability != TrackAvailability.UNAVAILABLE
         ):
-            results[str(i+1).rjust(4)] = MenuValue(
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
                 format_track(track), self.select_song(i)
             )
         return results
 
 
-class AlbumSearchResults(Menu):
+class AlbumSearchResults(TrackSearchResults):
     search = None
 
     def select_album(self, track_idx):
         def album_selected():
             res = AlbumSelected(self.navigator)
-            res.album = self.search.search_results[track_idx]
+            res.album = self.search.results[track_idx]
             return res
         return album_selected
 
-    def get_options(self):
+    def get_options_from_search(self):
         results = {}
         for i, album in enumerate(
             album for album in
-            self.search.search_results
+            self.search.results
         ):
-            results[str(i+1).rjust(4)] = MenuValue(
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
                 format_album(album), self.select_album(i)
             )
         return results
@@ -297,7 +345,7 @@ class TrackSearch(Menu):
     is_searching = False
     search_pattern = ''
     search = None
-    search_type = 'track'
+    search_type = 'tracks'
     result_cls = TrackSearchResults
 
     def get_options(self):
@@ -305,13 +353,10 @@ class TrackSearch(Menu):
 
     def get_search_results(self):
         self.search_pattern = self.filter
-        # TODO: Hopefully remove this sometime...
-        from .search import search
         self.search = search(
             self.navigator.session, self.search_pattern,
             search_type=self.search_type
         )
-        # self.search = self.navigator.session.search(self.search_pattern)
         self.is_searching = True
         return self
 
@@ -348,7 +393,7 @@ class TrackSearch(Menu):
 
 
 class AlbumSearch(TrackSearch):
-    search_type = 'album'
+    search_type = 'albums'
     result_cls = AlbumSearchResults
 
 
@@ -426,9 +471,8 @@ class AlbumSelected(PlayListSelected):
         self.playlist = MockPlaylist(self.get_name(), self.get_tracks())
 
     def get_tracks(self):
-        # https://github.com/mopidy/pyspotify/issues/119
         if not self._tracks:
-            self._tracks = self.album.browse().load().tracks
+            self._tracks = self.album.tracks
         return self._tracks
 
     def get_name(self):

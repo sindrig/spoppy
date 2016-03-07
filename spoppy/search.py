@@ -17,13 +17,39 @@ def search(*args, **kwargs):
     return Search(*args, **kwargs)
 
 
-class Search(threading.Thread):
-    # ATM this class does not paginate. I might look into that later...
+class SearchResults(object):
+    def __init__(self, term, results, offset, total,
+                 previous_page=None, next_page=None):
+        self.term = term
+        self.results = results
+        self.total = total
+        self.offset = offset
+        self.previous_page = previous_page
+        self.next_page = next_page
 
+    def __iter__(self):
+        return iter(self.results)
+
+    def __getitem__(self, key):
+        return self.results[key]
+
+
+class Search(threading.Thread):
+    LIMIT = '50'
     ENDPOINTS = {
-        'track': '/v1/search?q={query}&type=track',
-        'album': '/v1/search?q={query}&type=album',
-        'artist': '/v1/search?q={query}&type=artist',
+        # Each entry is a tuple, (HTTP_ENDPOINT, CLS)
+        'tracks': (
+            '/v1/search?q={query}&type=track&limit='+LIMIT,
+            Track
+        ),
+        'albums': (
+            '/v1/search?q={query}&type=album&limit='+LIMIT,
+            Album
+        ),
+        'artists': (
+            '/v1/search?q={query}&type=artist&limit='+LIMIT,
+            None
+        ),
     }
     BASE_URL = 'https://api.spotify.com'
 
@@ -33,45 +59,58 @@ class Search(threading.Thread):
                  artist_offset=0, artist_count=20,
                  playlist_offset=0, playlist_count=20,
                  search_type=None,
-                 sp_search=None, add_ref=True):
+                 sp_search=None, add_ref=True, direct_endpoint=None):
         self.session = session
         self.query = query
         self.search_type = search_type
         self.loaded_event = threading.Event()
+
+        endpoint, self.item_cls = self.ENDPOINTS[self.search_type]
+
+        self.endpoint = direct_endpoint or (
+            self.BASE_URL + endpoint.format(query=self.query)
+        )
+
         super(Search, self).__init__()
 
         self.start()
 
     def run(self):
         try:
-            r = requests.get(
-                self.BASE_URL +
-                self.ENDPOINTS[self.search_type].format(query=self.query)
-            )
+            r = requests.get(self.endpoint)
         except requests.exceptions.ConnectionError:
-            self.search_results = []
+            self.results = SearchResults(self.query, [], 0, 0)
         else:
             r.raise_for_status()
-            response_json = r.json()
-            if 'tracks' in response_json:
-                self.search_results = [
-                    Track(self.session, track['uri'])
-                    for track in response_json['tracks']['items']
-                ]
-                self.search_results = [
-                    track for track in self.search_results if
-                    track.availability != TrackAvailability.UNAVAILABLE
-                ]
-                for item in self.search_results:
-                    item.load()
-            elif 'albums' in response_json:
-                self.search_results = [
-                    Album(self.session, album['uri'])
-                    for album in response_json['albums']['items']
-                ]
-                for item in self.search_results:
-                    # Not my fault....
-                    # See: https://github.com/mopidy/pyspotify/issues/119
-                    item.browse().load()
+
+            response_data = r.json()[self.search_type]
+
+            item_results = self.manipulate_items([
+                self.item_cls(self.session, item['uri'])
+                for item in response_data['items']
+            ])
+
+            self.results = SearchResults(
+                self.query,
+                item_results,
+                response_data['offset'],
+                response_data['total'],
+                response_data['previous'],
+                response_data['next']
+            )
 
         self.loaded_event.set()
+
+    def manipulate_items(self, items):
+        if self.search_type == 'albums':
+            # Not my fault....
+            # See: https://github.com/mopidy/pyspotify/issues/119
+            return [
+                item.browse().load() for item in items
+            ]
+        elif self.search_type == 'tracks':
+            return [
+                item.load() for item in items
+                if item.availability != TrackAvailability.UNAVAILABLE
+            ]
+        raise TypeError('Unknown search type %s' % self.search_type)
