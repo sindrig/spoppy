@@ -35,7 +35,7 @@ class SearchResults(object):
 
 
 class Search(threading.Thread):
-    LIMIT = '50'
+    LIMIT = '20'
     ENDPOINTS = {
         # Each entry is a tuple, (HTTP_ENDPOINT, CLS)
         'tracks': (
