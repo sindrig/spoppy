@@ -203,13 +203,22 @@ class MainMenu(Menu):
 class PlayListOverview(Menu):
 
     def get_options(self):
+        def include_playlist(playlist):
+            return (
+                playlist.name and
+                hasattr(playlist, 'link') and
+                any([
+                    track for track in playlist.tracks
+                    if track.availability != TrackAvailability.UNAVAILABLE
+                ])
+            )
         results = {}
         playlists = self.navigator.session.playlist_container
         playlists = enumerate(
             sorted(
                 (
                     playlist for playlist in playlists
-                    if playlist.name and hasattr(playlist, 'link')
+                    if include_playlist(playlist)
                 ),
                 key=lambda x: x.name
             )
