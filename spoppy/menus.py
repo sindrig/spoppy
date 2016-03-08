@@ -545,3 +545,49 @@ class SongSelectedWhilePlaying(Menu):
             )
         else:
             return 'Song [%s] selected'
+
+
+class SavePlaylist(Menu):
+    song_list = []
+    is_saving = False
+    callback = None
+
+    def get_options(self):
+        return {}
+
+    def save_playlist(self):
+        self.new_playlist_name = self.filter
+        self.is_saving = True
+        return self
+
+    def get_response(self):
+        if self.is_saving:
+            playlist = (
+                self.navigator.session.playlist_container.add_new_playlist(
+                    self.new_playlist_name
+                )
+            )
+            playlist.add_tracks(self.song_list)
+            playlist.load()
+            self.is_saving = False
+            if self.callback:
+                self.callback(playlist)
+            return responses.UP
+        return super(SavePlaylist, self).get_response()
+
+    def is_valid_response(self):
+        return super(SavePlaylist, self).is_valid_response() or MenuValue(
+            None, self.save_playlist
+        )
+
+    def get_ui(self):
+        if self.is_saving:
+            return 'Saving playlist as %s' % self.new_playlist_name
+        else:
+            return '\n'.join((
+                '%d songs to be added to new playlist' % len(self.song_list),
+                'Playlist name: %s' % self.filter,
+                '',
+                'Press [return] to search',
+                '(Pro tip: you can also input "u" to go up or "q" to quit)'
+            ))

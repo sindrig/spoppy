@@ -9,6 +9,7 @@ import spotify
 
 from .responses import NOOP, UP
 from .util import single_char_with_timeout, format_track
+from .menus import SavePlaylist
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ class Player(object):
             b'l': self.forward_10s,
             b'h': self.get_help,
             b'x': self.remove_current_song,
+            b'w': self.save_as_playlist,
         }
         key_names = {
             b' ': 'space'
@@ -383,6 +385,25 @@ class Player(object):
             self.play_current_song()
             self.playlist = None
         return NOOP
+
+    def save_as_playlist(self):
+        '''
+        Prompts the user for a name for a new playlist and allows him to
+        save the queue as a new playlist.
+        :returns: responses NOOP if the queue has not been modified.
+                  menus.SavePlaylist otherwise.
+        '''
+        if self.playlist:
+            # Do nothing if current playlist has not been modified
+            return NOOP
+
+        def playlist_saved_callback(playlist):
+            self.playlist = playlist
+
+        res = SavePlaylist(self.navigator)
+        res.song_list = self.song_list
+        res.callback = playlist_saved_callback
+        return res
 
     def stop_and_clear(self):
         '''
