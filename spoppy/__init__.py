@@ -10,7 +10,7 @@ logger = logging.getLogger('spoppy.main')
 
 
 def get_version():
-    return '1.2.1'
+    return '1.2.2'
 
 if click:
     @click.command()
