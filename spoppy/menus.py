@@ -241,6 +241,14 @@ class PlayListOverview(Menu):
 class TrackSearchResults(Menu):
     search = None
     paginating = False
+    _cached_search_results = []
+
+    def set_initial_results(self, search):
+        self.search = search
+        self.update_cache()
+
+    def update_cache(self):
+        self._cached_search_results.append(self.search)
 
     def get_response(self):
         if self.paginating:
@@ -249,16 +257,33 @@ class TrackSearchResults(Menu):
             return self
         return super(TrackSearchResults, self).get_response()
 
-    def go_to(self, destination):
+    def go_to(self, up_down):
+        if up_down > 0:
+            destination = 'next_page'
+        else:
+            destination = 'previous_page'
+
         def inner():
-            self.search = search(
-                self.navigator.session, self.search.query,
-                search_type=self.search.search_type,
-                direct_endpoint=getattr(
+            self.paginating = True
+
+            new_cache_idx = (
+                self._cached_search_results.index(self.search) + up_down
+            )
+
+            try:
+                self.search = self._cached_search_results[new_cache_idx]
+                logger.debug('Got search from cache, yahoo!')
+            except IndexError:
+                direct_endpoint = getattr(
                     self.search.results, destination
                 )
-            )
-            self.paginating = True
+                logger.debug('Initiating new search')
+                self.search = search(
+                    self.navigator.session, self.search.query,
+                    search_type=self.search.search_type,
+                    direct_endpoint=direct_endpoint
+                )
+                self.update_cache()
             return self
         return inner
 
@@ -298,11 +323,11 @@ class TrackSearchResults(Menu):
         results = self.get_options_from_search()
         if self.search.results.previous_page:
             results['p'] = MenuValue(
-                'Previous', self.go_to('previous_page')
+                'Previous', self.go_to(-1)
             )
         if self.search.results.next_page:
             results['n'] = MenuValue(
-                'Next', self.go_to('next_page')
+                'Next', self.go_to(1)
             )
         return results
 
@@ -366,7 +391,7 @@ class TrackSearch(Menu):
             self.is_searching = False
 
             search_results = self.result_cls(self.navigator)
-            search_results.search = self.search
+            search_results.set_initial_results(self.search)
 
             self.is_searching = False
             self.search_pattern = ''

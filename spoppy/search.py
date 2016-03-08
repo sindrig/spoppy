@@ -35,19 +35,18 @@ class SearchResults(object):
 
 
 class Search(threading.Thread):
-    LIMIT = '20'
     ENDPOINTS = {
         # Each entry is a tuple, (HTTP_ENDPOINT, CLS)
         'tracks': (
-            '/v1/search?q={query}&type=track&limit='+LIMIT,
+            '/v1/search?query={query}&offset=0&limit=20&type=track',
             Track
         ),
         'albums': (
-            '/v1/search?q={query}&type=album&limit='+LIMIT,
+            '/v1/search?query={query}&offset=0&limit=20&type=album',
             Album
         ),
         'artists': (
-            '/v1/search?q={query}&type=artist&limit='+LIMIT,
+            '/v1/search?query={query}&offset=0&limit=20&type=artist',
             None
         ),
     }
@@ -77,6 +76,7 @@ class Search(threading.Thread):
 
     def run(self):
         try:
+            logger.debug('Getting %s' % self.endpoint)
             r = requests.get(self.endpoint)
         except requests.exceptions.ConnectionError:
             self.results = SearchResults(self.query, [], 0, 0)
