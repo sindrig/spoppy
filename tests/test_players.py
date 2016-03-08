@@ -507,3 +507,30 @@ class TestPlayer(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.player.play_track(None)
+
+    @patch('spoppy.players.SavePlaylist')
+    def test_save_as_playlist(self, patched_saveplaylist):
+        SavePlaylist = Mock()
+        patched_saveplaylist.return_value = SavePlaylist
+        self.player.playlist = 'Something'
+
+        self.assertEqual(self.player.save_as_playlist(), SavePlaylist)
+        self.assertEqual(self.player.song_list, SavePlaylist.song_list)
+        self.assertTrue(callable(SavePlaylist.callback))
+
+        playlist = Mock()
+        playlist.name = 'foobar'
+        SavePlaylist.callback(playlist)
+        self.assertEqual(self.player.playlist, playlist)
+        self.assertEqual(self.player.original_playlist_name, 'foobar')
+
+        self.player.playlist = None
+
+        self.assertEqual(self.player.save_as_playlist(), SavePlaylist)
+        self.assertEqual(self.player.song_list, SavePlaylist.song_list)
+
+        self.assertTrue(callable(SavePlaylist.callback))
+
+        SavePlaylist.callback(playlist)
+        self.assertEqual(self.player.playlist, playlist)
+        self.assertEqual(self.player.original_playlist_name, 'foobar')

@@ -241,6 +241,17 @@ class PlayListOverview(Menu):
 class TrackSearchResults(Menu):
     search = None
     paginating = False
+    _cached_search_results = []
+
+    def set_initial_results(self, search):
+        self.search = search
+        self.update_cache()
+
+    def update_cache(self):
+        self._cached_search_results.append(self.search)
+
+    def get_cache(self):
+        return self._cached_search_results
 
     def get_response(self):
         if self.paginating:
@@ -249,16 +260,31 @@ class TrackSearchResults(Menu):
             return self
         return super(TrackSearchResults, self).get_response()
 
-    def go_to(self, destination):
+    def go_to(self, up_down):
+        if up_down > 0:
+            destination = 'next_page'
+        else:
+            destination = 'previous_page'
+
         def inner():
-            self.search = search(
-                self.navigator.session, self.search.query,
-                search_type=self.search.search_type,
-                direct_endpoint=getattr(
+            self.paginating = True
+
+            new_cache_idx = self.get_cache().index(self.search) + up_down
+
+            try:
+                self.search = self.get_cache()[new_cache_idx]
+                logger.debug('Got search from cache, yahoo!')
+            except IndexError:
+                direct_endpoint = getattr(
                     self.search.results, destination
                 )
-            )
-            self.paginating = True
+                logger.debug('Initiating new search')
+                self.search = search(
+                    self.navigator.session, self.search.query,
+                    search_type=self.search.search_type,
+                    direct_endpoint=direct_endpoint
+                )
+                self.update_cache()
             return self
         return inner
 
@@ -298,11 +324,11 @@ class TrackSearchResults(Menu):
         results = self.get_options_from_search()
         if self.search.results.previous_page:
             results['p'] = MenuValue(
-                'Previous', self.go_to('previous_page')
+                'Previous', self.go_to(-1)
             )
         if self.search.results.next_page:
             results['n'] = MenuValue(
-                'Next', self.go_to('next_page')
+                'Next', self.go_to(1)
             )
         return results
 
@@ -366,7 +392,7 @@ class TrackSearch(Menu):
             self.is_searching = False
 
             search_results = self.result_cls(self.navigator)
-            search_results.search = self.search
+            search_results.set_initial_results(self.search)
 
             self.is_searching = False
             self.search_pattern = ''
@@ -399,6 +425,7 @@ class AlbumSearch(TrackSearch):
 
 class PlayListSelected(Menu):
     playlist = None
+    deleting = False
 
     def shuffle_play(self):
         self.navigator.player.load_playlist(
@@ -430,6 +457,21 @@ class PlayListSelected(Menu):
         self.navigator.player.add_to_queue(self.playlist)
         return self.navigator.player
 
+    def delete_playlist(self):
+        self.deleting = True
+        return self
+
+    def do_delete_playlist(self):
+        p_idx = self.navigator.session.playlist_container.index(
+            self.playlist
+        )
+        self.navigator.session.playlist_container.remove_playlist(p_idx)
+        return responses.UP
+
+    def cancel_delete_playlist(self):
+        self.deleting = False
+        return self
+
     def get_tracks(self):
         return self.playlist.tracks
 
@@ -438,27 +480,36 @@ class PlayListSelected(Menu):
 
     def get_options(self):
         results = {}
-        for i, track in enumerate(
-            track for track in
-            self.get_tracks()
-            if track.availability != TrackAvailability.UNAVAILABLE
-        ):
-            results[str(i+1).rjust(4)] = MenuValue(
-                format_track(track), self.select_song(i)
-            )
-        if results:
-            results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
-            if self.navigator.player.is_playing():
-                results['add_to_queue'] = MenuValue(
-                    'Add %s to queue' % self.get_name(),
-                    self.add_to_queue
-                )
+        if self.deleting:
+            results['y'] = MenuValue('Yes', self.do_delete_playlist)
+            results['n'] = MenuValue('No', self.cancel_delete_playlist)
         else:
-            logger.debug('There are no songs in this playlist!')
+            for i, track in enumerate(
+                track for track in
+                self.get_tracks()
+                if track.availability != TrackAvailability.UNAVAILABLE
+            ):
+                results[str(i+1).rjust(4)] = MenuValue(
+                    format_track(track), self.select_song(i)
+                )
+            if results:
+                results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
+                if self.navigator.player.is_playing():
+                    results['add_to_queue'] = MenuValue(
+                        'Add %s to queue' % self.get_name(),
+                        self.add_to_queue
+                    )
+            else:
+                logger.debug('There are no songs in this playlist!')
+            results['x'] = MenuValue('Delete playlist', self.delete_playlist)
 
         return results
 
     def get_header(self):
+        if self.deleting:
+            return 'Are you sure you want to delete playlist [%s]' % (
+                self.get_name()
+            )
         return 'Playlist [%s] selected' % self.get_name()
 
 
@@ -520,3 +571,106 @@ class SongSelectedWhilePlaying(Menu):
             )
         else:
             return 'Song [%s] selected'
+
+
+class SavePlaylist(Menu):
+    song_list = []
+    is_saving = False
+    callback = None
+    original_playlist_name = None
+
+    def get_options(self):
+        return {}
+
+    def save_playlist(self):
+        self.new_playlist_name = (
+            self.filter.strip() or self.original_playlist_name
+        )
+        self.is_saving = True
+        return self
+
+    def get_response(self):
+        if self.is_saving:
+            edited = False
+            if self.new_playlist_name == self.original_playlist_name:
+                try:
+                    playlist = [
+                        playlist for playlist in
+                        self.navigator.session.playlist_container
+                        if playlist.name == self.new_playlist_name
+                    ][0]
+                    playlist.load()
+                except IndexError:
+                    pass
+                else:
+                    # We found our playlist, now we have to edit it
+                    # We kind of want to maintain when the songs were added,
+                    # so we have to shuffle songs that were already in the
+                    # playlist around
+                    # These cases can come up:
+                    #   1. Song is in the same place in song list and playlist
+                    #   2. Song appears in playlist later than in song list
+                    #   3. Song does not appear at all in playlist
+                    for song_list_idx, song in enumerate(self.song_list):
+                        try:
+                            playlist_tracks_idx = playlist.tracks.index(song)
+                        except ValueError:
+                            # Case 3
+                            playlist.add_tracks(song, song_list_idx)
+                        else:
+                            if playlist_tracks_idx == song_list_idx:
+                                # Case 1
+                                continue
+                            elif playlist_tracks_idx >= song_list_idx:
+                                # Case 2
+                                playlist.reorder_tracks(
+                                    playlist_tracks_idx, song_list_idx
+                                )
+                    # Now we have to remove all the tracks that are at indexes
+                    # larger then the length of the song list
+                    playlist.remove_tracks(
+                        range(len(self.song_list), len(playlist.tracks))
+                    )
+                    edited = True
+            if not edited:
+                playlist = (
+                    self.navigator.session.playlist_container.add_new_playlist(
+                        self.new_playlist_name
+                    )
+                )
+                playlist.add_tracks(self.song_list)
+
+            playlist.load()
+            self.is_saving = False
+            while playlist.has_pending_changes:
+                self.navigator.session.process_events()
+            if self.callback:
+                self.callback(playlist)
+            return responses.UP
+        return super(SavePlaylist, self).get_response()
+
+    def is_valid_response(self):
+        return super(SavePlaylist, self).is_valid_response() or (
+            (
+                self.filter.strip() or self.original_playlist_name
+            ) and
+            MenuValue(
+                None, self.save_playlist
+            )
+        )
+
+    def get_ui(self):
+        if self.is_saving:
+            return 'Saving playlist as %s' % self.new_playlist_name
+        else:
+            return '\n'.join((
+                '%d songs to be added to new playlist' % len(self.song_list),
+                'The original playlist name was [%s]. Leave the name empty '
+                'to replace [%s] with the current song list' % (
+                    self.original_playlist_name, self.original_playlist_name
+                ) if self.original_playlist_name else '',
+                'Playlist name: %s' % self.filter,
+                '',
+                'Press [return] to save your playlist',
+                '(Pro tip: you can also input "u" to go up or "q" to quit)'
+            ))

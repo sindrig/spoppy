@@ -7,7 +7,7 @@ from spoppy import menus, responses
 from . import utils
 
 
-class OptionTests(unittest.TestCase):
+class TestOptions(unittest.TestCase):
 
     def setUp(self):
         self.dct = {
@@ -406,7 +406,8 @@ class TestSubMenus(unittest.TestCase):
     def test_playlist_selected_does_not_fail_on_empty_playlist(self):
         ps = menus.PlayListSelected(self.navigator)
         ps.playlist = utils.Playlist('asdf', [])
-        self.assertEqual(len(ps.get_options()), 0)
+        # Only delete available
+        self.assertEqual(len(ps.get_options()), 1)
 
     def test_playlist_selected_contains_only_valid_tracks(self):
         ps = self.get_playlist_selected()
@@ -455,3 +456,218 @@ class TestSubMenus(unittest.TestCase):
         self.assertEqual(song_selected_result.playlist, ps.playlist)
         self.assertEqual(song_selected_result.track, ps.playlist.tracks[0])
         self.assertEqual(self.navigator.player.play_track.call_count, 1)
+
+
+class TestSearch(unittest.TestCase):
+
+    def setUp(self):
+        self.navigator = Mock()
+
+    @patch('spoppy.menus.Menu.get_response')
+    def test_uses_parent_get_response(self, patched_get_response):
+        for cls in (
+            menus.TrackSearchResults,
+            menus.AlbumSearchResults,
+            menus.TrackSearch,
+            menus.AlbumSearch
+        ):
+            patched_get_response.reset_mock()
+            patched_get_response.return_value = 'foobar'
+            menu = cls(self.navigator)
+            self.assertEqual(menu.get_response(), 'foobar')
+            patched_get_response.assert_called_once_with()
+
+    @patch('spoppy.menus.TrackSearchResults.update_cache')
+    def test_updates_cache_on_init(self, patched_update):
+        search = 'foobar'
+        menu = menus.TrackSearchResults(self.navigator)
+        menu.set_initial_results(search)
+        patched_update.assert_called_once_with()
+
+    def test_get_update_cache(self):
+        search = 'foobar'
+        menu = menus.TrackSearchResults(self.navigator)
+        self.assertEqual(len(menu.get_cache()), 0)
+        menu.search = search
+        menu.update_cache()
+        self.assertIn(search, menu.get_cache())
+
+    @patch('spoppy.menus.TrackSearchResults.search')
+    def test_resets_paginating(self, patched_search):
+        patched_search.loaded_event.wait.return_value = True
+        menu = menus.TrackSearchResults(self.navigator)
+        menu.paginating = True
+        self.assertEqual(menu.get_response(), menu)
+        self.assertFalse(menu.paginating)
+        patched_search.loaded_event.wait.assert_called_once_with()
+
+    @patch('spoppy.menus.TrackSearchResults.update_cache')
+    @patch('spoppy.menus.search')
+    @patch('spoppy.menus.TrackSearchResults.get_cache')
+    def test_go_to_from_cache(
+        self, patched_cache,
+        patched_search, patched_update
+    ):
+        patched_cache.return_value = [Mock(), Mock()]
+
+        menu = menus.TrackSearchResults(self.navigator)
+        menu.search = patched_cache.return_value[0]
+        # next_page
+        callback = menu.go_to(1)
+        self.assertEqual(callback(), menu)
+        self.assertEqual(menu.search, patched_cache.return_value[1])
+        self.assertTrue(menu.paginating)
+        patched_update.assert_not_called()
+        patched_search.assert_not_called()
+
+        # previous_page
+        callback = menu.go_to(-1)
+        self.assertTrue(callable(callback))
+        self.assertEqual(callback(), menu)
+        self.assertEqual(menu.search, patched_cache.return_value[0])
+        self.assertTrue(menu.paginating)
+        patched_update.assert_not_called()
+        patched_search.assert_not_called()
+
+    @patch('spoppy.menus.TrackSearchResults.update_cache')
+    @patch('spoppy.menus.search')
+    @patch('spoppy.menus.TrackSearchResults.get_cache')
+    def test_go_to_from_search(
+        self, patched_cache,
+        patched_search, patched_update
+    ):
+        patched_cache.return_value = [Mock()]
+        patched_search.return_value = Mock()
+
+        menu = menus.TrackSearchResults(self.navigator)
+        menu.search = patched_cache.return_value[0]
+
+        callback = menu.go_to(1)
+        self.assertTrue(callable(callback))
+        self.assertEqual(callback(), menu)
+        self.assertEqual(menu.search, patched_search.return_value)
+        self.assertTrue(menu.paginating)
+        patched_update.assert_called_once_with()
+        # Don't check for how it was called, at least not at the moment
+        self.assertEqual(patched_search.call_count, 1)
+
+    @patch('spoppy.menus.TrackSearchResults.search')
+    def test_select_song_while_playing(self, patched_self_search):
+        patched_self_search.results = ['foo']
+        self.navigator.player.is_playing.return_value = True
+
+        menu = menus.TrackSearchResults(self.navigator)
+
+        callback = menu.select_song(0)
+
+        self.assertTrue(callable(callback))
+        res = callback()
+        self.assertIsInstance(res, menus.SongSelectedWhilePlaying)
+        self.assertEqual(res.track, 'foo')
+
+    @patch('spoppy.menus.TrackSearchResults.search')
+    def test_select_song_while_paused(self, patched_self_search):
+        patched_self_search.results = ['foo']
+        self.navigator.player.is_playing.return_value = False
+
+        menu = menus.TrackSearchResults(self.navigator)
+
+        callback = menu.select_song(0)
+
+        self.assertTrue(callable(callback))
+        res = callback()
+        self.assertEqual(res, self.navigator.player)
+        self.navigator.player.clear.assert_called_once_with()
+        self.navigator.player.add_to_queue.assert_called_once_with('foo')
+        self.navigator.player.play_track.assert_called_once_with(0)
+
+    @patch('spoppy.menus.TrackSearchResults.search')
+    def test_get_res_idx(self, patched_self_search):
+        menu = menus.TrackSearchResults(self.navigator)
+
+        for i in range(0, 5, 20):
+            patched_self_search.results.offset = i
+            self.assertEqual(menu.get_res_idx(0), i+1)
+
+    @patch('spoppy.menus.Menu.get_ui')
+    def test_returns_different_ui_while_paginating(self, patched_get_ui):
+        menu = menus.TrackSearchResults(self.navigator)
+
+        first_one = menu.get_ui()
+        menu.paginating = True
+        second_one = menu.get_ui()
+        self.assertNotEqual(first_one, second_one)
+        patched_get_ui.assert_called_once_with()
+
+    @patch('spoppy.menus.TrackSearchResults.get_options_from_search')
+    def test_get_options(self, patched_get_from_search):
+        patched_get_from_search.side_effect = [
+            {}, {}, {}, {}
+        ]
+
+        menu = menus.TrackSearchResults(self.navigator)
+        menu.search = Mock()
+        menu.search.results.previous_page = True
+        menu.search.results.next_page = True
+
+        menu.paginating = True
+        self.assertEqual(len(menu.get_options()), 0)
+
+        menu.paginating = False
+        self.assertEqual(len(menu.get_options()), 2)
+
+        menu.search.results.previous_page = False
+        self.assertEqual(len(menu.get_options()), 1)
+
+        menu.search.results.next_page = False
+        self.assertEqual(len(menu.get_options()), 0)
+
+
+class TestPlaylistSaver(unittest.TestCase):
+
+    def setUp(self):
+        self.navigator = Mock()
+
+    def test_returns_different_ui_while_paginating(self):
+        menu = menus.SavePlaylist(self.navigator)
+        menu.filter = ''
+        menu.song_list = []
+
+        first_one = menu.get_ui()
+        menu.is_saving = True
+        menu.new_playlist_name = ''
+        second_one = menu.get_ui()
+        self.assertNotEqual(first_one, second_one)
+
+    @patch('spoppy.menus.Menu.get_response')
+    def test_uses_parent_get_response(self, patched_get_response):
+        patched_get_response.reset_mock()
+        patched_get_response.return_value = 'foobar'
+        menu = menus.SavePlaylist(self.navigator)
+        self.assertEqual(menu.get_response(), 'foobar')
+        patched_get_response.assert_called_once_with()
+
+    def test_saves_playlist(self):
+        playlist_mock = Mock()
+        (
+            self.navigator.session.playlist_container
+            .add_new_playlist.return_value
+        ) = playlist_mock
+        playlist_mock.has_pending_changes = False
+
+        menu = menus.SavePlaylist(self.navigator)
+        menu.is_saving = True
+        menu.new_playlist_name = 'foobar'
+        menu.song_list = [1, 2, 3]
+        menu.callback = Mock()
+
+        self.assertEqual(menu.get_response(), responses.UP)
+
+        (
+            menu.navigator.session.playlist_container.add_new_playlist
+        ).assert_called_once_with(menu.new_playlist_name)
+
+        playlist_mock.add_tracks.assert_called_once_with(menu.song_list)
+        playlist_mock.load.assert_called_once_with()
+
+        menu.callback.assert_called_once_with(playlist_mock)
