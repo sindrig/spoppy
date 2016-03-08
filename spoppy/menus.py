@@ -250,6 +250,9 @@ class TrackSearchResults(Menu):
     def update_cache(self):
         self._cached_search_results.append(self.search)
 
+    def get_cache(self):
+        return self._cached_search_results
+
     def get_response(self):
         if self.paginating:
             self.search.loaded_event.wait()
@@ -266,12 +269,10 @@ class TrackSearchResults(Menu):
         def inner():
             self.paginating = True
 
-            new_cache_idx = (
-                self._cached_search_results.index(self.search) + up_down
-            )
+            new_cache_idx = self.get_cache().index(self.search) + up_down
 
             try:
-                self.search = self._cached_search_results[new_cache_idx]
+                self.search = self.get_cache()[new_cache_idx]
                 logger.debug('Got search from cache, yahoo!')
             except IndexError:
                 direct_endpoint = getattr(
