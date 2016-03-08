@@ -43,7 +43,7 @@ DBus integration
 
 1. Run `make install_dbus`
 2. Make sure you have python-gobject2 installed
-3. Symlink gobject (and possibly glib) to your virtualenv
+3. Symlink gobject (and possibly glib) to your virtualenv (that is, if you're not installing globally!)
 
   * ln -s /usr/lib/python3.5/site-packages/gobject/ $VIRTUAL_ENV/lib/python3.5/site-packages/gobject
   * ln -s /usr/lib/python3.5/site-packages/glib/ $VIRTUAL_ENV/lib/python3.5/site-packages/glib
