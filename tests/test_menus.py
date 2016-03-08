@@ -653,6 +653,7 @@ class TestPlaylistSaver(unittest.TestCase):
             self.navigator.session.playlist_container
             .add_new_playlist.return_value
         ) = playlist_mock
+        playlist_mock.has_pending_changes = False
 
         menu = menus.SavePlaylist(self.navigator)
         menu.is_saving = True

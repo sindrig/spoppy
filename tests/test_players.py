@@ -518,8 +518,11 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(self.player.song_list, SavePlaylist.song_list)
         self.assertTrue(callable(SavePlaylist.callback))
 
-        SavePlaylist.callback('foobar')
-        self.assertEqual(self.player.playlist, 'foobar')
+        playlist = Mock()
+        playlist.name = 'foobar'
+        SavePlaylist.callback(playlist)
+        self.assertEqual(self.player.playlist, playlist)
+        self.assertEqual(self.player.original_playlist_name, 'foobar')
 
         self.player.playlist = None
 
@@ -528,5 +531,6 @@ class TestPlayer(unittest.TestCase):
 
         self.assertTrue(callable(SavePlaylist.callback))
 
-        SavePlaylist.callback('foobar')
-        self.assertEqual(self.player.playlist, 'foobar')
+        SavePlaylist.callback(playlist)
+        self.assertEqual(self.player.playlist, playlist)
+        self.assertEqual(self.player.original_playlist_name, 'foobar')
