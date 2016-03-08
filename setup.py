@@ -12,16 +12,28 @@ if sys.version_info < (3, 3):
     sys.exit(1)
 
 
-with open('requirements.txt') as f:
+with open('requirements.txt', 'r') as f:
     required = f.read().splitlines()
+
+with open('README.rst', 'r') as f:
+    long_description = f.read()
 
 setup(
     name='spoppy',
     version=get_version(),
     description='A lightweight spotify CLI',
+    long_description=long_description,
     author='Sindri Guðmundsson',
     author_email='sindrigudmundsson@gmail.com',
     url='https://github.com/sindrig/spoppy',
+    licence='MIT',
+    classifiers=[
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'License :: OSI Approved :: MIT License'
+    ],
+    keywords='spoppy spotify cli',
     packages=['spoppy'],
     test_suite='nose.collector',
     install_requires=required,
