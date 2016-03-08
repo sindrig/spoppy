@@ -20,6 +20,7 @@ class Player(object):
 
     shuffle = False
     repeat = REPEAT_OPTIONS[0]
+    original_playlist_name = None
 
     # Initialization and external helpers
     def __init__(self, navigator):
@@ -48,9 +49,13 @@ class Player(object):
             b'h': self.get_help,
             b'x': self.remove_current_song,
             b'w': self.save_as_playlist,
+            b'\x1b[A': self.move_song_up,
+            b'\x1b[B': self.move_song_down,
         }
         key_names = {
-            b' ': 'space'
+            b' ': 'space',
+            b'\x1b[A': 'up arrow',
+            b'\x1b[B': 'down arrow',
         }
         self.reversed_actions = defaultdict(list)
         for key, value in self.actions.items():
@@ -135,6 +140,9 @@ class Player(object):
         res = []
         res.append('')
         for action, hotkeys in sorted(self.reversed_actions.items()):
+            if self.shuffle and action.startswith('move_song'):
+                # Moving songs is not available when we are shuffling
+                continue
             res.append(
                 '[%s]: %s' % (
                     '/'.join(hotkeys),
@@ -331,6 +339,38 @@ class Player(object):
         self.show_help = not self.show_help
         return NOOP
 
+    def move_song_down(self):
+        '''
+        Move the currently playing song up one place in the song order.
+        If the player is in shuffle mode it does absolutely nothing!
+        :returns: responses.NOOP
+        '''
+        if not self.shuffle:
+            i = self.current_track_idx
+            k = i + 1
+            sl = self.song_list
+            if k >= len(sl):
+                k = 0
+            sl[i], sl[k] = sl[k], sl[i]
+            self.current_track_idx = k
+        return NOOP
+
+    def move_song_up(self):
+        '''
+        Move the currently playing song up one place in the song order.
+        If the player is in shuffle mode it does absolutely nothing!
+        :returns: responses.NOOP
+        '''
+        if not self.shuffle:
+            i = self.current_track_idx
+            k = i - 1
+            sl = self.song_list
+            if k < 0:
+                k = len(sl) - 1
+            sl[i], sl[k] = sl[k], sl[i]
+            self.current_track_idx = k
+        return NOOP
+
     def next_song(self):
         '''
         Plays the next song in the song list
@@ -395,9 +435,11 @@ class Player(object):
         '''
         def playlist_saved_callback(playlist):
             self.playlist = playlist
+            self.original_playlist_name = playlist.name
 
         res = SavePlaylist(self.navigator)
         res.song_list = self.song_list
+        res.original_playlist_name = self.original_playlist_name
         res.callback = playlist_saved_callback
         return res
 
@@ -527,6 +569,7 @@ class Player(object):
             if track.availability != spotify.TrackAvailability.UNAVAILABLE
         ]
         self.playlist = playlist
+        self.original_playlist_name = self.playlist.name
         if shuffle is not None:
             self.shuffle = shuffle
         self.set_song_order_by_shuffle()

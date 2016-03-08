@@ -577,33 +577,86 @@ class SavePlaylist(Menu):
     song_list = []
     is_saving = False
     callback = None
+    original_playlist_name = None
 
     def get_options(self):
         return {}
 
     def save_playlist(self):
-        self.new_playlist_name = self.filter
+        self.new_playlist_name = (
+            self.filter.strip() or self.original_playlist_name
+        )
         self.is_saving = True
         return self
 
     def get_response(self):
         if self.is_saving:
-            playlist = (
-                self.navigator.session.playlist_container.add_new_playlist(
-                    self.new_playlist_name
+            edited = False
+            if self.new_playlist_name == self.original_playlist_name:
+                try:
+                    playlist = [
+                        playlist for playlist in
+                        self.navigator.session.playlist_container
+                        if playlist.name == self.new_playlist_name
+                    ][0]
+                    playlist.load()
+                except IndexError:
+                    pass
+                else:
+                    # We found our playlist, now we have to edit it
+                    # We kind of want to maintain when the songs were added,
+                    # so we have to shuffle songs that were already in the
+                    # playlist around
+                    # These cases can come up:
+                    #   1. Song is in the same place in song list and playlist
+                    #   2. Song appears in playlist later than in song list
+                    #   3. Song does not appear at all in playlist
+                    for song_list_idx, song in enumerate(self.song_list):
+                        try:
+                            playlist_tracks_idx = playlist.tracks.index(song)
+                        except ValueError:
+                            # Case 3
+                            playlist.add_tracks(song, song_list_idx)
+                        else:
+                            if playlist_tracks_idx == song_list_idx:
+                                # Case 1
+                                continue
+                            elif playlist_tracks_idx >= song_list_idx:
+                                # Case 2
+                                playlist.reorder_tracks(
+                                    playlist_tracks_idx, song_list_idx
+                                )
+                    # Now we have to remove all the tracks that are at indexes
+                    # larger then the length of the song list
+                    playlist.remove_tracks(
+                        range(len(self.song_list), len(playlist.tracks))
+                    )
+                    edited = True
+            if not edited:
+                playlist = (
+                    self.navigator.session.playlist_container.add_new_playlist(
+                        self.new_playlist_name
+                    )
                 )
-            )
-            playlist.add_tracks(self.song_list)
+                playlist.add_tracks(self.song_list)
+
             playlist.load()
             self.is_saving = False
+            while playlist.has_pending_changes:
+                self.navigator.session.process_events()
             if self.callback:
                 self.callback(playlist)
             return responses.UP
         return super(SavePlaylist, self).get_response()
 
     def is_valid_response(self):
-        return super(SavePlaylist, self).is_valid_response() or MenuValue(
-            None, self.save_playlist
+        return super(SavePlaylist, self).is_valid_response() or (
+            (
+                self.filter.strip() or self.original_playlist_name
+            ) and
+            MenuValue(
+                None, self.save_playlist
+            )
         )
 
     def get_ui(self):
@@ -612,6 +665,10 @@ class SavePlaylist(Menu):
         else:
             return '\n'.join((
                 '%d songs to be added to new playlist' % len(self.song_list),
+                'The original playlist name was [%s]. Leave the name empty '
+                'to replace [%s] with the current song list' % (
+                    self.original_playlist_name, self.original_playlist_name
+                ) if self.original_playlist_name else '',
                 'Playlist name: %s' % self.filter,
                 '',
                 'Press [return] to save your playlist',
