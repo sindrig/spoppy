@@ -13,3 +13,6 @@ coverage: clean
 
 upload:
 	python setup.py sdist upload -r pypi
+
+test_upload:
+	python setup.py sdist upload -r pypitest
