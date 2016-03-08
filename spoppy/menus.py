@@ -614,6 +614,6 @@ class SavePlaylist(Menu):
                 '%d songs to be added to new playlist' % len(self.song_list),
                 'Playlist name: %s' % self.filter,
                 '',
-                'Press [return] to search',
+                'Press [return] to save your playlist',
                 '(Pro tip: you can also input "u" to go up or "q" to quit)'
             ))
