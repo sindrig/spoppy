@@ -425,6 +425,7 @@ class AlbumSearch(TrackSearch):
 
 class PlayListSelected(Menu):
     playlist = None
+    deleting = False
 
     def shuffle_play(self):
         self.navigator.player.load_playlist(
@@ -456,6 +457,21 @@ class PlayListSelected(Menu):
         self.navigator.player.add_to_queue(self.playlist)
         return self.navigator.player
 
+    def delete_playlist(self):
+        self.deleting = True
+        return self
+
+    def do_delete_playlist(self):
+        p_idx = self.navigator.session.playlist_container.index(
+            self.playlist
+        )
+        self.navigator.session.playlist_container.remove_playlist(p_idx)
+        return responses.UP
+
+    def cancel_delete_playlist(self):
+        self.deleting = False
+        return self
+
     def get_tracks(self):
         return self.playlist.tracks
 
@@ -464,27 +480,36 @@ class PlayListSelected(Menu):
 
     def get_options(self):
         results = {}
-        for i, track in enumerate(
-            track for track in
-            self.get_tracks()
-            if track.availability != TrackAvailability.UNAVAILABLE
-        ):
-            results[str(i+1).rjust(4)] = MenuValue(
-                format_track(track), self.select_song(i)
-            )
-        if results:
-            results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
-            if self.navigator.player.is_playing():
-                results['add_to_queue'] = MenuValue(
-                    'Add %s to queue' % self.get_name(),
-                    self.add_to_queue
-                )
+        if self.deleting:
+            results['y'] = MenuValue('Yes', self.do_delete_playlist)
+            results['n'] = MenuValue('No', self.cancel_delete_playlist)
         else:
-            logger.debug('There are no songs in this playlist!')
+            for i, track in enumerate(
+                track for track in
+                self.get_tracks()
+                if track.availability != TrackAvailability.UNAVAILABLE
+            ):
+                results[str(i+1).rjust(4)] = MenuValue(
+                    format_track(track), self.select_song(i)
+                )
+            if results:
+                results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
+                if self.navigator.player.is_playing():
+                    results['add_to_queue'] = MenuValue(
+                        'Add %s to queue' % self.get_name(),
+                        self.add_to_queue
+                    )
+            else:
+                logger.debug('There are no songs in this playlist!')
+            results['x'] = MenuValue('Delete playlist', self.delete_playlist)
 
         return results
 
     def get_header(self):
+        if self.deleting:
+            return 'Are you sure you want to delete playlist [%s]' % (
+                self.get_name()
+            )
         return 'Playlist [%s] selected' % self.get_name()
 
 
