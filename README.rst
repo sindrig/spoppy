@@ -9,7 +9,11 @@ See requirements.txt for required python packages.
 
 You will need a Spotify Premium account.
 
-You will need libspotify, libffi-dev and libasound2-dev installed. Use your distribution's package manager.
+You will need libspotify, libffi-dev and libasound2-dev installed. 
+
+Use your distribution's package manager for libffi-dev and libasound2-dev.
+
+To install libspotify, see `Pyspotify installation <https://docs.mopidy.com/en/v0.8.1/installation/libspotify/>`_. (It's also available in the `AUR <https://aur.archlinux.org/packages/libspotify/>`_).
 
 For DBust integration you'll need python-dbus and python-gobject2. Use your distribution's package manager. Spoppy will work without these packages but won't expose it's DBus procedures.
 
