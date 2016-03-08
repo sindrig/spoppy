@@ -393,10 +393,6 @@ class Player(object):
         :returns: responses NOOP if the queue has not been modified.
                   menus.SavePlaylist otherwise.
         '''
-        if self.playlist:
-            # Do nothing if current playlist has not been modified
-            return NOOP
-
         def playlist_saved_callback(playlist):
             self.playlist = playlist
 

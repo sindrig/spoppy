@@ -406,7 +406,8 @@ class TestSubMenus(unittest.TestCase):
     def test_playlist_selected_does_not_fail_on_empty_playlist(self):
         ps = menus.PlayListSelected(self.navigator)
         ps.playlist = utils.Playlist('asdf', [])
-        self.assertEqual(len(ps.get_options()), 0)
+        # Only delete available
+        self.assertEqual(len(ps.get_options()), 1)
 
     def test_playlist_selected_contains_only_valid_tracks(self):
         ps = self.get_playlist_selected()

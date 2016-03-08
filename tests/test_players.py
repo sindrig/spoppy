@@ -514,7 +514,13 @@ class TestPlayer(unittest.TestCase):
         patched_saveplaylist.return_value = SavePlaylist
         self.player.playlist = 'Something'
 
-        self.assertEqual(self.player.save_as_playlist(), responses.NOOP)
+        self.assertEqual(self.player.save_as_playlist(), SavePlaylist)
+        self.assertEqual(self.player.song_list, SavePlaylist.song_list)
+        self.assertTrue(callable(SavePlaylist.callback))
+
+        SavePlaylist.callback('foobar')
+        self.assertEqual(self.player.playlist, 'foobar')
+
         self.player.playlist = None
 
         self.assertEqual(self.player.save_as_playlist(), SavePlaylist)
@@ -524,4 +530,3 @@ class TestPlayer(unittest.TestCase):
 
         SavePlaylist.callback('foobar')
         self.assertEqual(self.player.playlist, 'foobar')
-
