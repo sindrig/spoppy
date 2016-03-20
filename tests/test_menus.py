@@ -1,6 +1,6 @@
 import unittest
 import uuid
-from unittest.mock import Mock, patch
+from mock import Mock, patch
 
 from spoppy import menus, responses
 
@@ -15,8 +15,8 @@ class TestOptions(unittest.TestCase):
             '2': menus.MenuValue('B', Mock()),
             '3': menus.MenuValue('C', Mock()),
             's': menus.MenuValue('Search', Mock()),
-            'kk': menus.MenuValue('þþ', Mock()),
-            'ko': menus.MenuValue('þ', Mock()),
+            'kk': menus.MenuValue('pp', Mock()),
+            'ko': menus.MenuValue('p', Mock()),
             'q': menus.MenuValue('o', Mock()),
             'o': menus.MenuValue('q', Mock()),
         }
@@ -38,11 +38,11 @@ class TestOptions(unittest.TestCase):
         self.assertIn('s', tc)
 
     def test_filter_by_name(self):
-        tc = self.op.filter('þ')
+        tc = self.op.filter('p')
         self.assertEqual(len(tc), 2)
         self.assertIn('kk', tc)
         self.assertIn('ko', tc)
-        tc = self.op.filter('þþ')
+        tc = self.op.filter('pp')
         self.assertEqual(len(tc), 1)
         self.assertIn('kk', tc)
         tc = self.op.filter('Sea')
@@ -67,9 +67,9 @@ class TestOptions(unittest.TestCase):
 
     def test_possiblities_with_spaces(self):
         op = menus.Options({
-            '    a': menus.MenuValue('þ', Mock()),
-            'b    ': menus.MenuValue('þ', Mock()),
-            '    c    ': menus.MenuValue('þ', Mock()),
+            '    a': menus.MenuValue('p', Mock()),
+            'b    ': menus.MenuValue('p', Mock()),
+            '    c    ': menus.MenuValue('p', Mock()),
         })
         for key in 'a', 'b', 'c':
             tc = op.get_possibilities(key)
@@ -120,7 +120,7 @@ class TestOptions(unittest.TestCase):
     def test_check_unique_keys(self):
         with self.assertRaises(TypeError):
             menus.Options({
-                'a': menus.MenuValue('þ', Mock()),
+                'a': menus.MenuValue('p', Mock()),
                 ' a': menus.MenuValue('k', Mock())
             })
         with self.assertRaises(TypeError):

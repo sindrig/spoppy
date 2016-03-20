@@ -4,7 +4,10 @@ import select
 import sys
 import threading
 
-import _thread
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 import termios
 import tty
 
@@ -31,7 +34,7 @@ def readchar(wait_for_char=0.1):
 
 
 def single_char_with_timeout(timeout=5):
-    timer = threading.Timer(timeout, _thread.interrupt_main)
+    timer = threading.Timer(timeout, thread.interrupt_main)
     response = None
     try:
         timer.start()

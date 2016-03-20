@@ -1,7 +1,10 @@
 import logging
 import threading
 
-import _thread
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 
 from .util import format_track
 
@@ -68,7 +71,7 @@ if dbus:
         def Previous(self):
             self.lifecycle.player.previous_song()
             self.lifecycle.player.trigger_redraw()
-            _thread.interrupt_main()
+            thread.interrupt_main()
             return format_track(self.lifecycle.player.current_track)
 
         @dbus.service.method(
@@ -78,7 +81,7 @@ if dbus:
         def Next(self):
             self.lifecycle.player.next_song()
             self.lifecycle.player.trigger_redraw()
-            _thread.interrupt_main()
+            thread.interrupt_main()
             return format_track(self.lifecycle.player.current_track)
 
         @dbus.service.method(

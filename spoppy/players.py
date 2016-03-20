@@ -3,7 +3,11 @@ from collections import defaultdict
 import random
 import threading
 import time
-import _thread
+
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 
 import spotify
 
@@ -166,7 +170,9 @@ class Player(object):
             seconds_played += time.time() - self.play_timestamp
 
         # pyspotify's duration is in ms
-        percent_played = (seconds_played * 1000) / self.current_track.duration
+        percent_played = (seconds_played * 1000) / float(
+            self.current_track.duration
+        )
         mins_played = self.get_duration_from_s(seconds_played)
 
         return (
@@ -582,7 +588,7 @@ class Player(object):
         :returns: None
         '''
         self.end_of_track.set()
-        _thread.interrupt_main()
+        thread.interrupt_main()
 
     def play_current_song(self):
         '''

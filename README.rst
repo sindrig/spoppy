@@ -5,11 +5,13 @@ Lightweight Spotify Command-Line interface for Linux
 Requirements
 ==============
 
+Python 2.7 or Python 3.3+
+
 See requirements.txt for required python packages.
 
 You will need a Spotify Premium account.
 
-You will need libspotify, libffi-dev and libasound2-dev installed. 
+You will need libspotify, libffi-dev and libasound2-dev installed.
 
 Use your distribution's package manager for libffi-dev and libasound2-dev.
 
@@ -29,7 +31,7 @@ After installation run :code:`spoppy` in your terminal and you're all set!
 Development
 =============
 
-1. Create python3.4+ virtualenv
+1. Create a virtualenv (python 2.7 or python 3.3+)
 2. Clone this project
 3. Activate your virtualenv
 4. Install requirements

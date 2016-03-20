@@ -1,7 +1,7 @@
 from spotify import TrackAvailability
 from collections import namedtuple
 
-from unittest.mock import Mock
+from mock import Mock
 
 Artist = namedtuple('Artist', ('name', ))
 

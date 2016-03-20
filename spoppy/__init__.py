@@ -10,7 +10,7 @@ logger = logging.getLogger('spoppy.main')
 
 
 def get_version():
-    return '1.2.2'
+    return '1.3.0'
 
 if click:
     @click.command()
@@ -22,12 +22,16 @@ if click:
         from .navigation import Leifur
         from .config import get_config, set_config, get_config_from_user
 
-        lock = LockFile('/tmp/spoppy.lock')
+        lock = LockFile('/tmp/spoppy')
         try:
             # Try for 5s to acquire the lock
             lock.acquire(5)
         except LockTimeout:
             click.echo('Could not acquire lock, is spoppy running?')
+            click.echo(
+                'If you\'re sure that spoppy is not running, '
+                'try removing the lock file %s' % lock.lock_file
+            )
         else:
 
             if username and password:
@@ -36,11 +40,13 @@ if click:
                 username, password = get_config()
             if not (username and password):
                 username, password = get_config_from_user()
+            navigator = None
             try:
                 navigator = Leifur(username, password)
                 navigator.start()
             finally:
-                navigator.shutdown()
+                if navigator:
+                    navigator.shutdown()
                 logger.debug('Finally, bye!')
         finally:
             if lock.i_am_locking():
