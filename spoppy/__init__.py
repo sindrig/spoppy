@@ -22,12 +22,16 @@ if click:
         from .navigation import Leifur
         from .config import get_config, set_config, get_config_from_user
 
-        lock = LockFile('/tmp/spoppy.lock')
+        lock = LockFile('/tmp/spoppy')
         try:
             # Try for 5s to acquire the lock
             lock.acquire(5)
         except LockTimeout:
             click.echo('Could not acquire lock, is spoppy running?')
+            click.echo(
+                'If you\'re sure that spoppy is not running, '
+                'try removing the lock file %s' % lock.lock_file
+            )
         else:
 
             if username and password:
