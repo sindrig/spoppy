@@ -65,3 +65,6 @@ tmp/
 
 # added by GitSavvy
 /venv/
+
+# added by GitSavvy
+/venv27/
