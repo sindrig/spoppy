@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
 
@@ -7,8 +8,8 @@ import sys
 from setuptools import setup
 from spoppy import get_version
 
-if sys.version_info < (3, 3):
-    print('You need at least python 3.3')
+if (3, 0) < sys.version_info < (3, 3) or sys.version_info < (2, 7):
+    print('You need python 2.7+ or python 3.3+')
     sys.exit(1)
 
 
@@ -23,7 +24,7 @@ setup(
     version=get_version(),
     description='A lightweight spotify CLI',
     long_description=long_description,
-    author='Sindri Guðmundsson',
+    author=u'Sindri Guðmundsson',
     author_email='sindrigudmundsson@gmail.com',
     url='https://github.com/sindrig/spoppy',
     licence='MIT',
@@ -34,6 +35,7 @@ setup(
         'Natural Language :: English',
         'Operating System :: POSIX :: Linux',
         'Operating System :: Unix',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',

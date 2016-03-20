@@ -7,9 +7,21 @@ logger = logging.getLogger(__name__)
 
 TerminalSize = namedtuple('TerminalSize', ('width', 'height'))
 
+if hasattr(shutil, 'get_terminal_size'):
+    # py3.3+
+    get_terminal_dimensions = shutil.get_terminal_size
+else:
+    # py2.7
+    import os
+    TerminalDimensions = namedtuple('TerminalDimensions', ('columns', 'lines'))
+
+    def get_terminal_dimensions(fallback):
+        rows, cols = os.popen('stty size', 'r').read().split()
+        return TerminalDimensions(int(cols), int(rows))
+
 
 def get_terminal_size():
-    size = shutil.get_terminal_size((120, 40))
+    size = get_terminal_dimensions((120, 40))
     return TerminalSize(size.columns, size.lines)
 
 

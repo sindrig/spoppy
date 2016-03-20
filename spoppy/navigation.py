@@ -8,6 +8,13 @@ from .players import Player
 from .terminal import get_terminal_size
 from .config import clear_config
 
+try:
+    # py2.7+
+    basestring
+except NameError:
+    # py3.3+
+    basestring = str
+
 logger = logging.getLogger(__name__)
 
 
@@ -82,7 +89,7 @@ class Leifur(object):
         click.echo('')
 
     def print_menu(self, menu):
-        if isinstance(menu, str):
+        if isinstance(menu, basestring):
             click.echo(menu)
         elif isinstance(menu, (list, tuple)):
             for item in menu:
@@ -104,6 +111,8 @@ class Leifur(object):
                 else:
                     click.echo(item)
             click.echo('')
+        else:
+            logger.error('I have no idea how to print menu %r' % menu)
 
     def update_progress(self, status, start, perc, end):
         s = '\r[%s] %s[%s]%s' % (

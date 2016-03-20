@@ -10,7 +10,7 @@ logger = logging.getLogger('spoppy.main')
 
 
 def get_version():
-    return '1.2.2'
+    return '1.3.0'
 
 if click:
     @click.command()
@@ -40,11 +40,13 @@ if click:
                 username, password = get_config()
             if not (username and password):
                 username, password = get_config_from_user()
+            navigator = None
             try:
                 navigator = Leifur(username, password)
                 navigator.start()
             finally:
-                navigator.shutdown()
+                if navigator:
+                    navigator.shutdown()
                 logger.debug('Finally, bye!')
         finally:
             if lock.i_am_locking():

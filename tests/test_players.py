@@ -1,6 +1,6 @@
 import unittest
 from collections import namedtuple
-from unittest.mock import MagicMock, Mock, patch
+from mock import MagicMock, Mock, patch
 
 import spotify
 from spoppy import players, responses
@@ -406,7 +406,7 @@ class TestPlayer(unittest.TestCase):
         self.assertIn(track_a, self.player.song_list)
         self.assertIn(track_b, self.player.song_list)
 
-    @patch('spoppy.players._thread')
+    @patch('spoppy.players.thread')
     def test_on_end_of_track(self, patched__thread):
         self.player.end_of_track = Mock()
         self.player.on_end_of_track()
