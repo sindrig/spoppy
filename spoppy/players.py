@@ -418,7 +418,7 @@ class Player(object):
         '''
         Prompts the user for a name for a new playlist and allows him to
         save the queue as a new playlist.
-        :returns: responses NOOP if the queue has not been modified.
+        :returns: responses.NOOP if the queue has not been modified.
                   menus.SavePlaylist otherwise.
         '''
         def playlist_saved_callback(playlist):
@@ -432,10 +432,18 @@ class Player(object):
         return res
 
     def show_song_info(self):
-        res = SongSelectedWhilePlaying(self.navigator)
-        res.track = self.current_track
-        res.playlist = self.playlist
-        return res
+        '''
+        Shows the same menu that would have been shown if the user selected
+        the song from the menu
+        :returns: menus.SongSelectedWhilePlaying if there is a song currently
+                  playing, responses.NOOP otherwise
+        '''
+        if self.current_track:
+            res = SongSelectedWhilePlaying(self.navigator)
+            res.track = self.current_track
+            res.playlist = self.playlist
+            return res
+        return NOOP
 
     def stop_and_clear(self):
         '''
