@@ -49,6 +49,19 @@ class TestOptions(unittest.TestCase):
         self.assertEqual(len(tc), 1)
         self.assertIn('s', tc)
 
+    def test_fuzzy_filter(self):
+        dct = {
+            '1': menus.MenuValue('This is a playlist', Mock())
+        }
+        op = menus.Options(dct)
+        should_match = (
+            'ThisIsAPlaylist',
+            'ThisPlaylist',
+            'tiaplay',
+        )
+        for _filter in should_match:
+            self.assertEqual(len(op.filter(_filter)), 1)
+
     def test_filter_is_case_insensitive(self):
         self.assertEqual(self.op.filter('Search'), self.op.filter('search'))
 
@@ -76,17 +89,6 @@ class TestOptions(unittest.TestCase):
             self.assertEqual(len(tc), 1)
             self.assertNotEqual(tc, [key])
             self.assertIn(key, tc[0])
-
-    def test_possibilities_only_start_of_words(self):
-        # Also testing for case insesitivity
-        op = menus.Options({
-            'match1': menus.MenuValue('Sindri', Mock()),
-            'not1': menus.MenuValue('iSindri', Mock()),
-            'match2': menus.MenuValue('This is sindri', Mock()),
-            'not2': menus.MenuValue('This is notSindri', Mock()),
-        })
-        possibilities = op.get_possibilities('Sindri')
-        self.assertEqual(sorted(possibilities), sorted(['match1', 'match2']))
 
     def test_matches_by_correct_key(self):
         op = menus.Options({

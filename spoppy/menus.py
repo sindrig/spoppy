@@ -47,18 +47,23 @@ class Options(dict):
             for key, (name, destination) in self.items():
                 if key.lstrip(' ').startswith(pattern):
                     possibilities_key.append(key)
-                if (
-                    # Only match start of words
-                    name.lower().startswith(pattern) or
-                    ' %s' % pattern in name.lower()
-                ):
+                elif self.fuzzy_match(pattern, name.lower()):
                     possibilities_name.append(key)
+
             logger.debug('possibilities_key: %s' % possibilities_key)
             logger.debug('possibilities_name: %s' % possibilities_name)
             cached_match = self._cached_matches[pattern] = (
                 list(set(possibilities_key + possibilities_name))
             )
         return cached_match
+
+    def fuzzy_match(self, pattern, name):
+        try:
+            for key in pattern:
+                name = name[name.index(key) + 1:]
+            return True
+        except ValueError:
+            return False
 
     def filter(self, pattern):
         possibilities = self.get_possibilities(pattern)
