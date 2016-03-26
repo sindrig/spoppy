@@ -12,8 +12,8 @@ except ImportError:
 import spotify
 
 from .responses import NOOP, UP
-from .util import single_char_with_timeout, format_track
-from .menus import SavePlaylist
+from .util import single_char_with_timeout, format_track, get_duration_from_s
+from .menus import SavePlaylist, SongSelectedWhilePlaying
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class Player(object):
             b'h': self.get_help,
             b'x': self.remove_current_song,
             b'w': self.save_as_playlist,
+            b'i': self.show_song_info,
             b'\x1b[A': self.move_song_up,
             b'\x1b[B': self.move_song_down,
         }
@@ -117,25 +118,6 @@ class Player(object):
         return self.player.state == 'playing'
 
     # UI specific
-    def get_duration_from_s(self, s):
-        '''
-        Formats seconds as "%M:%S"
-        :param s: Seconds in int/float
-        :returns: s formatted as "%M:%S"
-        '''
-        # Max length is 59 minutes, 59 seconds
-        MAX_LENGTH = 59 * 60 + 59
-        if not isinstance(s, (int, float)):
-            raise TypeError('Seconds must be int/float')
-        elif s < 0:
-            raise TypeError('Seconds must be positive')
-        elif s > MAX_LENGTH:
-            s = MAX_LENGTH
-        return '%s:%s' % (
-            str(int(s / 60)).zfill(2),
-            str(int(s % 60)).zfill(2)
-        )
-
     def get_help_ui(self):
         '''
         Gets menu items explaining the use of hotkeys within the player
@@ -173,7 +155,7 @@ class Player(object):
         percent_played = (seconds_played * 1000) / float(
             self.current_track.duration
         )
-        mins_played = self.get_duration_from_s(seconds_played)
+        mins_played = get_duration_from_s(seconds_played)
 
         return (
             self.player.state,
@@ -436,7 +418,7 @@ class Player(object):
         '''
         Prompts the user for a name for a new playlist and allows him to
         save the queue as a new playlist.
-        :returns: responses NOOP if the queue has not been modified.
+        :returns: responses.NOOP if the queue has not been modified.
                   menus.SavePlaylist otherwise.
         '''
         def playlist_saved_callback(playlist):
@@ -448,6 +430,20 @@ class Player(object):
         res.original_playlist_name = self.original_playlist_name
         res.callback = playlist_saved_callback
         return res
+
+    def show_song_info(self):
+        '''
+        Shows the same menu that would have been shown if the user selected
+        the song from the menu
+        :returns: menus.SongSelectedWhilePlaying if there is a song currently
+                  playing, responses.NOOP otherwise
+        '''
+        if self.current_track:
+            res = SongSelectedWhilePlaying(self.navigator)
+            res.track = self.current_track
+            res.playlist = self.playlist
+            return res
+        return NOOP
 
     def stop_and_clear(self):
         '''
@@ -605,7 +601,7 @@ class Player(object):
         self.end_of_track = threading.Event()
         self.current_track = current_track.load()
 
-        self.current_track_duration = self.get_duration_from_s(
+        self.current_track_duration = get_duration_from_s(
             self.current_track.duration / 1000
         )
 

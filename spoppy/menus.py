@@ -5,7 +5,7 @@ from spotify import TrackAvailability
 from .search import search
 from . import responses
 from .util import (format_album, format_track, single_char_with_timeout,
-                   sorted_menu_items)
+                   sorted_menu_items, get_duration_from_s)
 
 logger = logging.getLogger(__name__)
 
@@ -47,18 +47,23 @@ class Options(dict):
             for key, (name, destination) in self.items():
                 if key.lstrip(' ').startswith(pattern):
                     possibilities_key.append(key)
-                if (
-                    # Only match start of words
-                    name.lower().startswith(pattern) or
-                    ' %s' % pattern in name.lower()
-                ):
+                elif self.fuzzy_match(pattern, name.lower()):
                     possibilities_name.append(key)
+
             logger.debug('possibilities_key: %s' % possibilities_key)
             logger.debug('possibilities_name: %s' % possibilities_name)
             cached_match = self._cached_matches[pattern] = (
                 list(set(possibilities_key + possibilities_name))
             )
         return cached_match
+
+    def fuzzy_match(self, pattern, name):
+        try:
+            for key in pattern:
+                name = name[name.index(key) + 1:]
+            return True
+        except ValueError:
+            return False
 
     def filter(self, pattern):
         possibilities = self.get_possibilities(pattern)
@@ -565,12 +570,16 @@ class SongSelectedWhilePlaying(Menu):
         return results
 
     def get_header(self):
+        info = [
+            'Song: %s' % format_track(self.track),
+            'Duration: %s' % get_duration_from_s(self.track.duration / 1000.0)
+        ]
         if self.playlist:
-            return 'Song [%s] from playlist [%s] selected' % (
-                format_track(self.track), self.playlist.name
-            )
-        else:
-            return 'Song [%s] selected'
+            info.append('Playlist: %s' % self.playlist.name)
+        if self.track.album:
+            info.append('Album: %s' % self.track.album.name)
+            info.append('Released: %s' % self.track.album.year)
+        return '\n'.join(info)
 
 
 class SavePlaylist(Menu):

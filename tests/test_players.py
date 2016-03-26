@@ -56,27 +56,6 @@ class TestPlayer(unittest.TestCase):
         for action in self.player.reversed_actions:
             self.assertIn(action, actions)
 
-    def test_get_duration_from_s(self):
-        test_cases = {
-            0: '00:00',
-            9999999999999: '59:59',
-            59: '00:59',
-            60: '01:00',
-            157: '02:37'
-        }
-        for seconds, expected in test_cases.items():
-            self.assertEqual(
-                self.player.get_duration_from_s(seconds), expected
-            )
-
-    def test_get_duration_from_s_raises(self):
-        with self.assertRaises(TypeError):
-            self.player.get_duration_from_s(None)
-        with self.assertRaises(TypeError):
-            self.player.get_duration_from_s(-1)
-        with self.assertRaises(TypeError):
-            self.player.get_duration_from_s('01:57')
-
     @patch('spoppy.players.time')
     def test_get_progress_while_playing(self, patched_time):
         self.player.player = Mock()
@@ -415,7 +394,7 @@ class TestPlayer(unittest.TestCase):
 
     @patch('spoppy.players.threading')
     @patch('spoppy.players.Player.get_track_by_idx')
-    @patch('spoppy.players.Player.get_duration_from_s')
+    @patch('spoppy.players.get_duration_from_s')
     @patch('spoppy.players.Player.play_pause')
     def test_play_current_song(
         self, patched_play_pause, patched_get_duration, patched_get_track,

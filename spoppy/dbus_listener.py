@@ -69,7 +69,10 @@ if dbus:
             in_signature='', out_signature='s'
         )
         def Previous(self):
-            self.lifecycle.player.previous_song()
+            try:
+                self.lifecycle.player.previous_song()
+            except RuntimeError as e:
+                return ', '.join(e.args)
             self.lifecycle.player.trigger_redraw()
             thread.interrupt_main()
             return format_track(self.lifecycle.player.current_track)
@@ -79,7 +82,10 @@ if dbus:
             in_signature='', out_signature='s'
         )
         def Next(self):
-            self.lifecycle.player.next_song()
+            try:
+                self.lifecycle.player.next_song()
+            except RuntimeError as e:
+                return ', '.join(e.args)
             self.lifecycle.player.trigger_redraw()
             thread.interrupt_main()
             return format_track(self.lifecycle.player.current_track)
