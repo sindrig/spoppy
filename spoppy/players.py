@@ -12,7 +12,7 @@ except ImportError:
 import spotify
 
 from .responses import NOOP, UP
-from .util import single_char_with_timeout, format_track
+from .util import single_char_with_timeout, format_track, get_duration_from_s
 from .menus import SavePlaylist
 
 logger = logging.getLogger(__name__)
@@ -117,25 +117,6 @@ class Player(object):
         return self.player.state == 'playing'
 
     # UI specific
-    def get_duration_from_s(self, s):
-        '''
-        Formats seconds as "%M:%S"
-        :param s: Seconds in int/float
-        :returns: s formatted as "%M:%S"
-        '''
-        # Max length is 59 minutes, 59 seconds
-        MAX_LENGTH = 59 * 60 + 59
-        if not isinstance(s, (int, float)):
-            raise TypeError('Seconds must be int/float')
-        elif s < 0:
-            raise TypeError('Seconds must be positive')
-        elif s > MAX_LENGTH:
-            s = MAX_LENGTH
-        return '%s:%s' % (
-            str(int(s / 60)).zfill(2),
-            str(int(s % 60)).zfill(2)
-        )
-
     def get_help_ui(self):
         '''
         Gets menu items explaining the use of hotkeys within the player
@@ -173,7 +154,7 @@ class Player(object):
         percent_played = (seconds_played * 1000) / float(
             self.current_track.duration
         )
-        mins_played = self.get_duration_from_s(seconds_played)
+        mins_played = get_duration_from_s(seconds_played)
 
         return (
             self.player.state,
@@ -605,7 +586,7 @@ class Player(object):
         self.end_of_track = threading.Event()
         self.current_track = current_track.load()
 
-        self.current_track_duration = self.get_duration_from_s(
+        self.current_track_duration = get_duration_from_s(
             self.current_track.duration / 1000
         )
 
