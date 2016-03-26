@@ -13,7 +13,7 @@ import spotify
 
 from .responses import NOOP, UP
 from .util import single_char_with_timeout, format_track, get_duration_from_s
-from .menus import SavePlaylist
+from .menus import SavePlaylist, SongSelectedWhilePlaying
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class Player(object):
             b'h': self.get_help,
             b'x': self.remove_current_song,
             b'w': self.save_as_playlist,
+            b'i': self.show_song_info,
             b'\x1b[A': self.move_song_up,
             b'\x1b[B': self.move_song_down,
         }
@@ -428,6 +429,12 @@ class Player(object):
         res.song_list = self.song_list
         res.original_playlist_name = self.original_playlist_name
         res.callback = playlist_saved_callback
+        return res
+
+    def show_song_info(self):
+        res = SongSelectedWhilePlaying(self.navigator)
+        res.track = self.current_track
+        res.playlist = self.playlist
         return res
 
     def stop_and_clear(self):
