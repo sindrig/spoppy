@@ -614,31 +614,31 @@ class TestSearch(unittest.TestCase):
         self.assertNotEqual(first_one, second_one)
         patched_get_ui.assert_called_once_with()
 
-    @patch('spoppy.menus.TrackSearchResults.get_options_from_search')
-    def test_get_options(self, patched_get_from_search):
-        patched_get_from_search.side_effect = [
-            {}, {}, {}, {}
-        ]
-
+    def test_get_options(self):
         menu = menus.TrackSearchResults(self.navigator)
         menu.search = Mock()
         menu.search.results.previous_page = True
         menu.search.results.next_page = True
+        menu.search.results.offset = 1
+        menu.search.results.results = []
 
         menu.paginating = True
         self.assertEqual(len(menu.get_options()), 0)
 
         menu.paginating = False
-        # Last page, next page, shuffle
-        self.assertEqual(len(menu.get_options()), 3)
-
-        menu.search.results.previous_page = False
-        # Only shuffle and next page
+        # Last page, next page
         self.assertEqual(len(menu.get_options()), 2)
 
-        menu.search.results.next_page = False
-        # Only shuffle
+        menu.search.results.previous_page = False
+        # Only next page
         self.assertEqual(len(menu.get_options()), 1)
+
+        menu.search.results.next_page = False
+        self.assertEqual(len(menu.get_options()), 0)
+
+        menu.search.results.results = [utils.Track('foo', 'bar')]
+        # Shuffle and the song itself
+        self.assertEqual(len(menu.get_options()), 2)
 
 
 class TestPlaylistSaver(unittest.TestCase):
