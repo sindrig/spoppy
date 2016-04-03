@@ -401,6 +401,7 @@ class TrackSearch(Menu):
     search = None
     search_type = 'tracks'
     result_cls = TrackSearchResults
+    num_iterations = 0
 
     def get_options(self):
         return {}
@@ -416,7 +417,10 @@ class TrackSearch(Menu):
 
     def get_response(self):
         if self.is_searching:
-            self.search.loaded_event.wait()
+            self.search.loaded_event.wait(1)
+            if not self.search.loaded_event.is_set():
+                self.num_iterations += 1
+                return responses.NOOP
             self.is_searching = False
 
             search_results = self.result_cls(self.navigator)
@@ -436,14 +440,17 @@ class TrackSearch(Menu):
 
     def get_ui(self):
         if self.is_searching:
-            return 'Searching for %s' % self.search_pattern
+            return (
+                ('Searching for [%s]..' % self.search_pattern) +
+                '.' * self.num_iterations
+            )
         else:
-            return '\n'.join((
+            return [
                 'Search query: %s' % self.filter,
                 '',
                 'Press [return] to search',
                 '(Pro tip: you can also input "u" to go up or "q" to quit)'
-            ))
+            ]
 
 
 class AlbumSearch(TrackSearch):
@@ -546,8 +553,8 @@ class AlbumSelected(PlayListSelected):
     _tracks = None
 
     def initialize(self):
-        super(AlbumSelected, self).initialize()
         self.playlist = MockPlaylist(self.get_name(), self.get_tracks())
+        super(AlbumSelected, self).initialize()
 
     def get_tracks(self):
         if not self._tracks:
@@ -596,6 +603,13 @@ class SongSelectedWhilePlaying(Menu):
             'Add [%s] to queue' % format_track(self.track),
             self.add_to_queue
         )
+        if self.track.album:
+            res = AlbumSelected(self.navigator)
+            res.album = self.track.album.browse().load()
+            results['ga'] = MenuValue(
+                'Go to track\'s album [%s]' % self.track.album.name,
+                res
+            )
         if self.navigator.spotipy_client:
             start_radio = StartRadio(self.navigator)
             start_radio.seeds = self.track.artists
@@ -613,7 +627,6 @@ class SongSelectedWhilePlaying(Menu):
             results['rt'] = MenuValue(
                 'Start radio based on [%s]' % format_track(self.track),
                 start_radio
-
             )
         return results
 
@@ -824,17 +837,23 @@ class StartRadio(Menu):
     seeds = None
     recommendations = None
     verbose_name = None
+    num_iterations = 0
 
     def get_options(self):
         return {}
 
     def get_response(self):
         if self.recommendations:
-            return responses.UP
-        self.recommendations = Recommendations(
-            self.navigator, self.seeds, self.seed_type
-        )
-        self.recommendations.loaded_event.wait()
+            if self.recommendations.loaded_event.is_set():
+                return responses.UP
+        else:
+            self.recommendations = Recommendations(
+                self.navigator, self.seeds, self.seed_type
+            )
+        self.recommendations.loaded_event.wait(1)
+        if not self.recommendations.loaded_event.is_set():
+            self.num_iterations += 1
+            return responses.NOOP
         radio_results = RadioSelected(self.navigator)
         radio_results.set_initial_results(self.recommendations)
         radio_results.radio_name = 'Spoppy Radio based on [%s]' % (
@@ -843,7 +862,14 @@ class StartRadio(Menu):
         return radio_results
 
     def get_ui(self):
-        return 'Querying spotify for radio, one moment...'
+        res = [(
+            'Querying spotify for radio, one moment..' +
+            '.' * self.num_iterations
+        )]
+        if self.num_iterations > 4:
+            res.append('')
+            res.append("(It's not my fault this is taking so long)")
+        return res
 
 
 class RadioSelected(TrackSearchResults):
