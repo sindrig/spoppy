@@ -39,18 +39,18 @@ class Player(object):
         self.clear()
         self.actions = {
             b'n': self.next_song,
-            b'\xc3\xa6': self.next_song,
+            b'l': self.next_song,
             b'p': self.previous_song,
-            b'j': self.previous_song,
+            b'h': self.previous_song,
             b' ': self.play_pause,
             b'u': UP,
             b'q': self.stop_and_clear,
             b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,
-            b'k': self.backward_10s,
-            b'l': self.forward_10s,
-            b'h': self.get_help,
+            b'j': self.backward_10s,
+            b'k': self.forward_10s,
+            b'?': self.get_help,
             b'x': self.remove_current_song,
             b'w': self.save_as_playlist,
             b'i': self.show_song_info,
@@ -205,7 +205,7 @@ class Player(object):
                   one should be right aligned.
         '''
         res = []
-        res.append('Press h for help')
+        res.append('Press ? for help')
         if self.playlist:
             res.append('Playing playlist: %s' % self.playlist.name)
         if self.show_help:
