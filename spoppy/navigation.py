@@ -25,8 +25,13 @@ class Leifur(object):
         self.player = Player(self)
         self.lifecycle = LifeCycle(username, password, self.player)
         self.session = None
+        self.lifecycle.check_spotipy_logged_in()
+        self.spotipy_client = self.lifecycle.get_spotipy_client()
         self.navigating = True
         logger.debug('Leifur initialized')
+
+    def refresh_spotipy_client(self):
+        self.spotipy_client = self.lifecycle.get_pyspotify_client()
 
     def start(self):
         if self.lifecycle.check_pyspotify_logged_in():
