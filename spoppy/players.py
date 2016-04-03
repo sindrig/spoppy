@@ -115,7 +115,7 @@ class Player(object):
         Used to determine if the `PySpotify` player is is currently playing
         :returns: True if the player is currently playing
         '''
-        return self.player.state == 'playing'
+        return self.player.state == spotify.PlayerState.PLAYING
 
     # UI specific
     def get_help_ui(self):

@@ -81,13 +81,40 @@ class LifeCycle(object):
         # end_of_track = threading.Event()
 
         def on_connection_state_updated(session):
+            KNOWN_STATES = (
+                'DISCONNECTED',
+                'LOGGED_IN',
+                'LOGGED_OUT',
+                'OFFLINE',
+                'UNDEFINED',
+            )
+            for state in KNOWN_STATES:
+                if (
+                    session.connection.state == getattr(
+                        spotify.ConnectionState, state
+                    )
+                ):
+                    logger.debug('Received connection state %s' % state)
             if session.connection.state is spotify.ConnectionState.LOGGED_IN:
                 logged_in.set()
+
+        def on_lost_play_token(session):
+            if self.player.is_playing():
+                self.player.play_pause()
+                logger.warning(
+                    'Spoppy has been paused. Spotify is probably playing '
+                    'somewhere else?'
+                )
 
         # Register event listeners
         self._pyspotify_session.on(
             spotify.SessionEvent.CONNECTION_STATE_UPDATED,
             on_connection_state_updated
+        )
+
+        self._pyspotify_session.on(
+            spotify.SessionEvent.PLAY_TOKEN_LOST,
+            on_lost_play_token
         )
 
         logger.debug('Actually logging in now...')
