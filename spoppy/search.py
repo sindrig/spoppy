@@ -73,7 +73,7 @@ class Search(threading.Thread):
             logger.debug('Getting %s' % self.endpoint)
             r = requests.get(self.endpoint)
         except requests.exceptions.ConnectionError:
-            self.results = SearchResults(self.query, [], 0, 0)
+            self.results = self.get_empty_results()
         else:
             r.raise_for_status()
 
@@ -81,6 +81,9 @@ class Search(threading.Thread):
             self.handle_results(response_data)
 
         self.loaded_event.set()
+
+    def get_empty_results(self):
+        return SearchResults(self.query, [], 0, 0)
 
     def handle_results(self, response_data):
         item_results = self.manipulate_items([
