@@ -1,11 +1,17 @@
 import logging
+import random
+import threading
+import webbrowser
 from collections import namedtuple
 
 from spotify import TrackAvailability
-from .search import search
+
 from . import responses
-from .util import (format_album, format_track, single_char_with_timeout,
-                   sorted_menu_items, get_duration_from_s)
+from .http_server import oAuthServerThread
+from .search import search
+from .util import (format_album, format_track, get_duration_from_s,
+                   single_char_with_timeout, sorted_menu_items)
+from .radio import Recommendations
 
 logger = logging.getLogger(__name__)
 
@@ -199,13 +205,18 @@ class MainMenu(Menu):
     INCLUDE_UP_ITEM = False
 
     def get_options(self):
-        return {
+        res = {
             'vp': MenuValue(
                 'View playlists', PlayListOverview(self.navigator)
             ),
             'st': MenuValue('Search for tracks', TrackSearch(self.navigator)),
             'sa': MenuValue('Search for albums', AlbumSearch(self.navigator)),
         }
+        if not self.navigator.spotipy_client:
+            res['li'] = MenuValue(
+                'Log in to spotify web api', LogIntoSpotipy(self.navigator)
+            )
+        return res
 
 
 class PlayListOverview(Menu):
@@ -295,20 +306,28 @@ class TrackSearchResults(Menu):
 
     def select_song(self, track_idx):
         def song_selected():
-            track = self.search.results[track_idx]
-            if self.navigator.player.is_playing():
-                # If the user is currently playing we want him to have the
-                # choice to add this song to the list of current songs or
-                # start playing this playlist from this song
-                menu = SongSelectedWhilePlaying(self.navigator)
-                menu.track = track
-                return menu
-            else:
-                self.navigator.player.clear()
-                self.navigator.player.add_to_queue(track)
-                self.navigator.player.play_track(0)
-                return self.navigator.player
+            track = self.search.results.results[track_idx]
+            menu = SongSelectedWhilePlaying(self.navigator)
+            menu.track = track
+            menu.playlist = self.get_mock_playlist()
+            return menu
         return song_selected
+
+    def get_mock_playlist(self):
+        return MockPlaylist(
+            self.get_mock_playlist_name(), self.search.results.results
+        )
+
+    def get_mock_playlist_name(self):
+        return 'Search for %s' % self.search.results.term
+
+    def shuffle_play(self):
+        self.navigator.player.load_playlist(
+            self.get_mock_playlist,
+            shuffle=True
+        )
+        self.navigator.player.play_current_song()
+        return self.navigator.player
 
     def get_header(self):
         return 'Search results for %s (total %d results)' % (
@@ -329,19 +348,22 @@ class TrackSearchResults(Menu):
         results = self.get_options_from_search()
         if self.search.results.previous_page:
             results['p'] = MenuValue(
-                'Previous', self.go_to(-1)
+                'Previous page', self.go_to(-1)
             )
         if self.search.results.next_page:
             results['n'] = MenuValue(
-                'Next', self.go_to(1)
+                'Next page', self.go_to(1)
             )
+        results['sp'] = MenuValue(
+            'Shuffle play current page', self.shuffle_play
+        )
         return results
 
     def get_options_from_search(self):
         results = {}
         for i, track in enumerate(
             track for track in
-            self.search.results
+            self.search.results.results
             if track.availability != TrackAvailability.UNAVAILABLE
         ):
             results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
@@ -356,7 +378,7 @@ class AlbumSearchResults(TrackSearchResults):
     def select_album(self, track_idx):
         def album_selected():
             res = AlbumSelected(self.navigator)
-            res.album = self.search.results[track_idx]
+            res.album = self.search.results.results[track_idx]
             return res
         return album_selected
 
@@ -364,7 +386,7 @@ class AlbumSearchResults(TrackSearchResults):
         results = {}
         for i, album in enumerate(
             album for album in
-            self.search.results
+            self.search.results.results
         ):
             results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
                 format_album(album), self.select_album(i)
@@ -442,20 +464,10 @@ class PlayListSelected(Menu):
 
     def select_song(self, track_idx):
         def song_selected():
-            if self.navigator.player.is_playing():
-                # If the user is currently playing we want him to have the
-                # choice to add this song to the list of current songs or
-                # start playing this playlist from this song
-                menu = SongSelectedWhilePlaying(self.navigator)
-                menu.playlist = self.playlist
-                menu.track = self.get_tracks()[track_idx]
-                return menu
-            else:
-                self.navigator.player.load_playlist(
-                    self.playlist
-                )
-                self.navigator.player.play_track(track_idx)
-                return self.navigator.player
+            menu = SongSelectedWhilePlaying(self.navigator)
+            menu.playlist = self.playlist
+            menu.track = self.get_tracks()[track_idx]
+            return menu
         return song_selected
 
     def add_to_queue(self):
@@ -500,13 +512,23 @@ class PlayListSelected(Menu):
             if results:
                 results['sp'] = MenuValue('Shuffle play', self.shuffle_play)
                 if self.navigator.player.is_playing():
-                    results['add_to_queue'] = MenuValue(
-                        'Add %s to queue' % self.get_name(),
+                    results['aq'] = MenuValue(
+                        'Add [%s] to queue' % self.get_name(),
                         self.add_to_queue
                     )
             else:
                 logger.debug('There are no songs in this playlist!')
             results['x'] = MenuValue('Delete playlist', self.delete_playlist)
+
+        if self.navigator.spotipy_client:
+            start_radio = StartRadio(self.navigator)
+            start_radio.seeds = self.playlist.tracks
+            start_radio.seed_type = 'tracks'
+            start_radio.verbose_name = self.get_name()
+            results['rt'] = MenuValue(
+                'Start radio based on [%s]' % self.get_name(),
+                start_radio
+            )
 
         return results
 
@@ -559,14 +581,39 @@ class SongSelectedWhilePlaying(Menu):
     def get_options(self):
         results = {}
         if self.playlist:
-            results['replace'] = MenuValue(
-                'Replace currently playing with %s' % (self.playlist.name),
+            if self.navigator.player.is_playing():
+                msg = 'Replace currently playing with [%s]' % (
+                    self.playlist.name
+                )
+            else:
+                msg = ('Play [%s]' % self.playlist.name)
+            results['pl'] = MenuValue(
+                msg,
                 self.replace_current
             )
-        results['add_to_queue'] = MenuValue(
-            'Add %s to queue' % format_track(self.track),
+        results['aq'] = MenuValue(
+            'Add [%s] to queue' % format_track(self.track),
             self.add_to_queue
         )
+        if self.navigator.spotipy_client:
+            start_radio = StartRadio(self.navigator)
+            start_radio.seeds = self.track.artists
+            start_radio.seed_type = 'artists'
+            start_radio.verbose_name = self.get_artist_names()
+            results['ra'] = MenuValue(
+                'Start radio based on [%s]' % self.get_artist_names(),
+                start_radio
+
+            )
+            start_radio = StartRadio(self.navigator)
+            start_radio.seeds = [self.track]
+            start_radio.seed_type = 'tracks'
+            start_radio.verbose_name = format_track(self.track)
+            results['rt'] = MenuValue(
+                'Start radio based on [%s]' % format_track(self.track),
+                start_radio
+
+            )
         return results
 
     def get_header(self):
@@ -579,7 +626,16 @@ class SongSelectedWhilePlaying(Menu):
         if self.track.album:
             info.append('Album: %s' % self.track.album.name)
             info.append('Released: %s' % self.track.album.year)
+        info.append(
+            self.get_artist_names()
+        )
         return '\n'.join(info)
+
+    def get_artist_names(self):
+        return ' & '.join(
+            artist.name for artist in self.track.artists
+            if artist.name
+        )
 
 
 class SavePlaylist(Menu):
@@ -683,3 +739,117 @@ class SavePlaylist(Menu):
                 'Press [return] to save your playlist',
                 '(Pro tip: you can also input "u" to go up or "q" to quit)'
             ))
+
+
+class LogIntoSpotipy(Menu):
+    _spotipy_response_parts = None
+    message_from_spotipy = None
+
+    def initialize(self):
+        self.sp_oauth = self.navigator.lifecycle.get_spotipy_oauth()
+        auth_url = self.sp_oauth.get_authorize_url()
+
+        def response_callback(parts):
+            logger.debug('Got response %s from http server', parts)
+            self._spotipy_response_parts = parts
+
+        server_started_event = threading.Event()
+        self.oauth_server = oAuthServerThread(
+            response_callback, server_started_event
+        )
+        self.oauth_server.start()
+        server_started_event.wait()
+        if not self.oauth_server.server:
+            # Probably we could not bind
+            self.message_from_spotipy = (
+                'Could not start the callback server, check your logs'
+            )
+        else:
+            webbrowser.open(auth_url)
+
+    def get_response(self):
+        logger.debug('Getting response from user in spotipy login')
+        response = single_char_with_timeout(3)
+        logger.debug('Got this response: %s' % response)
+        if response in (b'u', b'q'):
+            self.oauth_server.shutdown()
+            return responses.UP
+        if self._spotipy_response_parts:
+            self.oauth_server.shutdown()
+            logger.debug(
+                'Have this to handle from http request: %s',
+                self._spotipy_response_parts
+            )
+            if 'code' in self._spotipy_response_parts:
+                code = self._spotipy_response_parts['code'][0]
+                self.navigator.lifecycle.set_spotipy_token(
+                    self.sp_oauth.get_access_token(code)
+                )
+                self.navigator.refresh_spotipy_client()
+                return responses.UP
+            elif 'error' in self._spotipy_response_parts:
+                self.message_from_spotipy = (
+                    'Error logging in to spotipy: %s' %
+                    self._spotipy_response_parts['error']
+                )
+            else:
+                self.message_from_spotipy = (
+                    'No code and no error in %s' %
+                    self._spotipy_response_parts
+                )
+                logger.error(self.message_from_spotipy)
+        return responses.NOOP
+
+    def get_ui(self):
+        if self.message_from_spotipy:
+            res = [self.message_from_spotipy]
+        else:
+            res = [
+                (
+                    'Opening an authorization page in your browser, please'
+                    'follow the instructions there to finalize the '
+                    'authorization process'
+                )
+            ]
+        res += [
+            '',
+            'You can cancel at any time by typing "q" or "u"'
+        ]
+        return res
+
+
+class StartRadio(Menu):
+    seed_type = None
+    seeds = None
+    recommendations = None
+    verbose_name = None
+
+    def get_options(self):
+        return {}
+
+    def get_response(self):
+        if self.recommendations:
+            return responses.UP
+        self.recommendations = Recommendations(
+            self.navigator, self.seeds, self.seed_type
+        )
+        self.recommendations.loaded_event.wait()
+        radio_results = RadioSelected(self.navigator)
+        radio_results.set_initial_results(self.recommendations)
+        radio_results.radio_name = 'Spoppy Radio based on [%s]' % (
+            self.verbose_name
+        )
+        return radio_results
+
+    def get_ui(self):
+        return 'Querying spotify for radio, one moment...'
+
+
+class RadioSelected(TrackSearchResults):
+    radio_name = ''
+
+    def get_header(self):
+        return 'Radio list "%s" generated:' % self.get_mock_playlist_name()
+
+    def get_mock_playlist_name(self):
+        return self.radio_name or 'Spoppy Radio'

@@ -408,6 +408,11 @@ class TestSubMenus(unittest.TestCase):
     def test_playlist_selected_does_not_fail_on_empty_playlist(self):
         ps = menus.PlayListSelected(self.navigator)
         ps.playlist = utils.Playlist('asdf', [])
+        # Only delete and radio available
+        self.assertEqual(len(ps.get_options()), 2)
+
+        self.navigator.spotipy_client = None
+
         # Only delete available
         self.assertEqual(len(ps.get_options()), 1)
 
@@ -447,8 +452,8 @@ class TestSubMenus(unittest.TestCase):
         song_selected = ps.select_song(0)
 
         self.navigator.player.is_playing.return_value = False
-        self.assertEqual(song_selected(), self.navigator.player)
-        self.navigator.player.play_track.assert_called_once_with(0)
+        self.assertIsInstance(song_selected(), menus.SongSelectedWhilePlaying)
+        self.navigator.player.play_track.assert_not_called()
 
         self.navigator.player.is_playing.return_value = True
         song_selected_result = song_selected()
@@ -457,7 +462,7 @@ class TestSubMenus(unittest.TestCase):
         )
         self.assertEqual(song_selected_result.playlist, ps.playlist)
         self.assertEqual(song_selected_result.track, ps.playlist.tracks[0])
-        self.assertEqual(self.navigator.player.play_track.call_count, 1)
+        self.navigator.player.play_track.assert_not_called()
 
 
 class TestSearch(unittest.TestCase):
@@ -553,9 +558,15 @@ class TestSearch(unittest.TestCase):
         # Don't check for how it was called, at least not at the moment
         self.assertEqual(patched_search.call_count, 1)
 
+    def test_mock_playlist_contains_term_in_search(self):
+        menu = menus.TrackSearchResults(self.navigator)
+        menu.search = Mock()
+        menu.search.results.term = 'foobar'
+        self.assertIn('foobar', menu.get_mock_playlist_name())
+
     @patch('spoppy.menus.TrackSearchResults.search')
     def test_select_song_while_playing(self, patched_self_search):
-        patched_self_search.results = ['foo']
+        patched_self_search.results.results = ['foo']
         self.navigator.player.is_playing.return_value = True
 
         menu = menus.TrackSearchResults(self.navigator)
@@ -569,7 +580,7 @@ class TestSearch(unittest.TestCase):
 
     @patch('spoppy.menus.TrackSearchResults.search')
     def test_select_song_while_paused(self, patched_self_search):
-        patched_self_search.results = ['foo']
+        patched_self_search.results.results = ['foo']
         self.navigator.player.is_playing.return_value = False
 
         menu = menus.TrackSearchResults(self.navigator)
@@ -578,10 +589,12 @@ class TestSearch(unittest.TestCase):
 
         self.assertTrue(callable(callback))
         res = callback()
-        self.assertEqual(res, self.navigator.player)
-        self.navigator.player.clear.assert_called_once_with()
-        self.navigator.player.add_to_queue.assert_called_once_with('foo')
-        self.navigator.player.play_track.assert_called_once_with(0)
+        # self.assertEqual(res, self.navigator.player)
+        self.assertIsInstance(res, menus.SongSelectedWhilePlaying)
+        self.assertEqual(res.track, 'foo')
+        # self.navigator.player.clear.assert_called_once_with()
+        # self.navigator.player.add_to_queue.assert_called_once_with('foo')
+        # self.navigator.player.play_track.assert_called_once_with(0)
 
     @patch('spoppy.menus.TrackSearchResults.search')
     def test_get_res_idx(self, patched_self_search):
@@ -616,13 +629,16 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(len(menu.get_options()), 0)
 
         menu.paginating = False
-        self.assertEqual(len(menu.get_options()), 2)
+        # Last page, next page, shuffle
+        self.assertEqual(len(menu.get_options()), 3)
 
         menu.search.results.previous_page = False
-        self.assertEqual(len(menu.get_options()), 1)
+        # Only shuffle and next page
+        self.assertEqual(len(menu.get_options()), 2)
 
         menu.search.results.next_page = False
-        self.assertEqual(len(menu.get_options()), 0)
+        # Only shuffle
+        self.assertEqual(len(menu.get_options()), 1)
 
 
 class TestPlaylistSaver(unittest.TestCase):
@@ -673,3 +689,113 @@ class TestPlaylistSaver(unittest.TestCase):
         playlist_mock.load.assert_called_once_with()
 
         menu.callback.assert_called_once_with(playlist_mock)
+
+    @patch('spoppy.menus.threading')
+    @patch('spoppy.menus.webbrowser')
+    @patch('spoppy.menus.oAuthServerThread')
+    def test_spotipy_initialization(
+        self, patched_server, patched_browser, patched_threading
+    ):
+        sp_oauth = Mock()
+        self.navigator.lifecycle.get_spotipy_oauth.return_value = sp_oauth
+        sp_oauth.get_authorize_url.return_value = 'http://irdn.is/'
+
+        menu = menus.LogIntoSpotipy(self.navigator)
+        menu.initialize()
+
+        sp_oauth.get_authorize_url.assert_called_once_with()
+        patched_server().start.assert_called_once_with()
+        patched_browser.open.assert_called_once_with(
+            sp_oauth.get_authorize_url.return_value
+        )
+        self.assertIsNone(menu.message_from_spotipy)
+
+        patched_server.reset_mock()
+        patched_browser.reset_mock()
+        sp_oauth.reset_mock()
+        patched_server().server = None
+
+        menu = menus.LogIntoSpotipy(self.navigator)
+        menu.initialize()
+
+        sp_oauth.get_authorize_url.assert_called_once_with()
+        patched_server().start.assert_called_once_with()
+        patched_browser.open.assert_not_called()
+
+        self.assertIsNotNone(menu.message_from_spotipy)
+
+    @patch('spoppy.menus.single_char_with_timeout')
+    def test_spotipy_get_response_up(self, patched_chargetter):
+        menu = menus.LogIntoSpotipy(self.navigator)
+        menu.oauth_server = Mock()
+
+        for quitchar in b'q', b'u':
+            patched_chargetter.return_value = quitchar
+            self.assertEqual(menu.get_response(), responses.UP)
+            menu.oauth_server.shutdown.assert_called_once_with()
+            menu.oauth_server.reset_mock()
+
+    @patch('spoppy.menus.single_char_with_timeout')
+    def test_spotipy_get_response_response_parts_code(
+        self, patched_chargetter
+    ):
+        menu = menus.LogIntoSpotipy(self.navigator)
+        menu.oauth_server = Mock()
+        menu.sp_oauth = Mock()
+        patched_chargetter.return_value = None
+
+        menu._spotipy_response_parts = {
+            'code': [
+                'foobar'
+            ]
+        }
+        self.assertEqual(menu.get_response(), responses.UP)
+
+        menu.oauth_server.shutdown.assert_called_once_with()
+        self.navigator.lifecycle.set_spotipy_token.assert_called_once_with(
+            menu.sp_oauth.get_access_token('foobar')
+        )
+        self.navigator.refresh_spotipy_client.assert_called_once_with()
+
+    @patch('spoppy.menus.single_char_with_timeout')
+    def test_spotipy_get_response_response_parts_error(
+        self, patched_chargetter
+    ):
+        menu = menus.LogIntoSpotipy(self.navigator)
+        menu.oauth_server = Mock()
+        menu.sp_oauth = Mock()
+        patched_chargetter.return_value = None
+
+        menu._spotipy_response_parts = {
+            'error': [
+                'foobar'
+            ]
+        }
+        self.assertEqual(menu.get_response(), responses.NOOP)
+        menu.oauth_server.shutdown.assert_called_once_with()
+
+        self.navigator.lifecycle.set_spotipy_token.assert_not_called()
+
+        self.assertIn('foobar', menu.message_from_spotipy)
+
+    @patch('spoppy.menus.single_char_with_timeout')
+    def test_spotipy_get_response_response_parts_invalid(
+        self, patched_chargetter
+    ):
+        menu = menus.LogIntoSpotipy(self.navigator)
+        menu.oauth_server = Mock()
+        menu.sp_oauth = Mock()
+        patched_chargetter.return_value = None
+
+        menu._spotipy_response_parts = {
+            'foobar': [
+                'hallo', 'madur'
+            ]
+        }
+        self.assertEqual(menu.get_response(), responses.NOOP)
+        menu.oauth_server.shutdown.assert_called_once_with()
+
+        self.navigator.lifecycle.set_spotipy_token.assert_not_called()
+
+        self.assertIn('hallo', menu.message_from_spotipy)
+        self.assertIn('madur', menu.message_from_spotipy)

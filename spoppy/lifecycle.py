@@ -2,8 +2,10 @@ import logging
 import os
 import threading
 
+import click
 import spotify
 from appdirs import user_cache_dir
+from spotipy import Spotify, SpotifyException, oauth2
 
 from .dbus_listener import DBusListener
 from .terminal import ResizeChecker
@@ -21,6 +23,8 @@ class LifeCycle(object):
         self.player = player
         self.username = username
         self.password = password
+        self._spotipy_client = None
+        self._spotipy_token = None
         self._pyspotify_session = None
         self._pyspotify_session_loop = None
         self.service_stop_event = threading.Event()
@@ -127,3 +131,33 @@ class LifeCycle(object):
         else:
             logger.warning('PySpotify login failed!')
             return False
+
+    def get_spotipy_oauth(self):
+        client_id = 'ce333851d4db4ba1b6ccf9eaa52345fc'
+        client_secret = '549ec6a308cc4836b7144fc42277a6b2'
+        redirect_uri = 'http://localhost:8157/'
+
+        cache_location = os.path.join(
+            self.user_cache_dir, 'spotipy_token.cache'
+        )
+        return oauth2.SpotifyOAuth(
+            client_id, client_secret, redirect_uri,
+            scope=None,
+            cache_path=cache_location
+        )
+
+    def check_spotipy_logged_in(self):
+        sp_oauth = self.get_spotipy_oauth()
+        token_info = sp_oauth.get_cached_token()
+
+        if token_info:
+            self.set_spotipy_token(token_info)
+
+    def get_spotipy_client(self):
+        if self._spotipy_token:
+            if not self._spotipy_client:
+                self._spotipy_client = Spotify(auth=self._spotipy_token)
+            return self._spotipy_client
+
+    def set_spotipy_token(self, token):
+        self._spotipy_token = token['access_token']

@@ -27,12 +27,6 @@ class SearchResults(object):
         self.previous_page = previous_page
         self.next_page = next_page
 
-    def __iter__(self):
-        return iter(self.results)
-
-    def __getitem__(self, key):
-        return self.results[key]
-
 
 class Search(threading.Thread):
     ENDPOINTS = {
@@ -84,22 +78,24 @@ class Search(threading.Thread):
             r.raise_for_status()
 
             response_data = r.json()[self.search_type]
-
-            item_results = self.manipulate_items([
-                self.item_cls(self.session, item['uri'])
-                for item in response_data['items']
-            ])
-
-            self.results = SearchResults(
-                self.query,
-                item_results,
-                response_data['offset'],
-                response_data['total'],
-                response_data['previous'],
-                response_data['next']
-            )
+            self.handle_results(response_data)
 
         self.loaded_event.set()
+
+    def handle_results(self, response_data):
+        item_results = self.manipulate_items([
+            self.item_cls(self.session, item['uri'])
+            for item in response_data['items']
+        ])
+
+        self.results = SearchResults(
+            self.query,
+            item_results,
+            response_data['offset'],
+            response_data['total'],
+            response_data['previous'],
+            response_data['next']
+        )
 
     def manipulate_items(self, items):
         if self.search_type == 'albums':
