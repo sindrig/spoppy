@@ -354,9 +354,10 @@ class TrackSearchResults(Menu):
             results['n'] = MenuValue(
                 'Next page', self.go_to(1)
             )
-        results['sp'] = MenuValue(
-            'Shuffle play current page', self.shuffle_play
-        )
+        if len(self.search.results.results):
+            results['sp'] = MenuValue(
+                'Shuffle play current page', self.shuffle_play
+            )
         return results
 
     def get_options_from_search(self):
