@@ -323,7 +323,7 @@ class TrackSearchResults(Menu):
 
     def shuffle_play(self):
         self.navigator.player.load_playlist(
-            self.get_mock_playlist,
+            self.get_mock_playlist(),
             shuffle=True
         )
         self.navigator.player.play_current_song()
