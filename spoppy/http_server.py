@@ -1,8 +1,14 @@
 import logging
-from urllib.parse import parse_qs, urlparse
+try:
+    from urllib.parse import parse_qs, urlparse
+except ImportError:
+    from urlparse import parse_qs, urlparse
 
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+try:
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+except ImportError:
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 logger = logging.getLogger(__name__)
 HTTP_ADDRESS = '0.0.0.0'
