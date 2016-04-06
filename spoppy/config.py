@@ -3,6 +3,12 @@ import os
 
 from appdirs import user_cache_dir
 
+try:
+    # python2.7
+    input = raw_input
+except NameError:
+    pass
+
 CONFIG_FILE_NAME = os.path.join(
     user_cache_dir(appname='spoppy'), '.creds'
 )
