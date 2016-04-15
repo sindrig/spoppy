@@ -73,6 +73,7 @@ class Recommendations(Search):
         return RadioResults([])
 
     def handle_results(self, response_data):
+        logger.debug('Got %d songs', len(response_data))
         item_results = self.manipulate_items([
             self.item_cls(self.session, item['uri'])
             for item in response_data

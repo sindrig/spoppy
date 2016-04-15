@@ -1,5 +1,4 @@
 import logging
-import random
 import threading
 import webbrowser
 from collections import namedtuple

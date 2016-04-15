@@ -62,12 +62,10 @@ class Leifur(object):
         self.session.process_events()
         going.initialize()
         while self.navigating:
-            logger.debug('clearing screen...')
             click.clear()
             self.print_header()
             self.print_menu(going.get_ui())
             response = going.get_response()
-            logger.debug('Got response %s' % response)
             if callable(response):
                 response = response()
                 logger.debug('Got response %s after evaluation' % response)
