@@ -45,9 +45,9 @@ DBus integration
 
 1. Run `make install_dbus`
 2. Make sure you have python-gobject2 installed
-3. Symlink gobject (and possibly glib) to your virtualenv (that is, if you're not installing globally!)
+3. Symlink gi (and possibly glib) to your virtualenv (that is, if you're not installing globally!)
 
-  * ln -s /usr/lib/python3.5/site-packages/gobject/ $VIRTUAL_ENV/lib/python3.5/site-packages/gobject
+  * ln -s /usr/lib/python3.5/site-packages/gi/ $VIRTUAL_ENV/lib/python3.5/site-packages/gi
   * ln -s /usr/lib/python3.5/site-packages/glib/ $VIRTUAL_ENV/lib/python3.5/site-packages/glib
 
 4. The service will be available at "/com/spoppy" (f.x. :code:`qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)

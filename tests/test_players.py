@@ -264,14 +264,18 @@ class TestPlayer(unittest.TestCase):
             sorted(seen_repeat_flags)
         )
 
-    def test_add_track_to_queue(self):
+    @patch('spoppy.players.Player.play_current_song')
+    def test_add_track_to_queue(self, patched_play_current_song):
         track = MagicMock(spec=spotify.Track)
         self.player.playlist = 'foo'
+        self.assertIsNone(self.player.current_track)
         self.assertIsNone(self.player.add_to_queue(track))
         self.assertIn(track, self.player.song_list)
         self.assertIsNone(self.player.playlist)
+        patched_play_current_song.assert_called_once_with(start_playing=False)
 
-    def test_add_playlist_to_queue(self):
+    @patch('spoppy.players.Player.play_current_song')
+    def test_add_playlist_to_queue(self, patched_play_current_song):
         tracks = [
             MagicMock(spec=spotify.Track),
             MagicMock(spec=spotify.Track),
@@ -286,6 +290,8 @@ class TestPlayer(unittest.TestCase):
         for track in tracks:
             self.assertIn(track, self.player.song_list)
         self.assertIsNone(self.player.playlist)
+        self.assertEqual(patched_play_current_song.call_count, 3)
+        patched_play_current_song.assert_called_with(start_playing=False)
 
     @patch('spoppy.players.Player.next_song')
     @patch('spoppy.players.Player.play_current_song')

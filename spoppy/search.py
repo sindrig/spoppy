@@ -32,15 +32,15 @@ class Search(threading.Thread):
     ENDPOINTS = {
         # Each entry is a tuple, (HTTP_ENDPOINT, CLS)
         'tracks': (
-            '/v1/search?query={query}&offset=0&limit=20&type=track',
+            u'/v1/search?query={query}&offset=0&limit=20&type=track',
             Track
         ),
         'albums': (
-            '/v1/search?query={query}&offset=0&limit=20&type=album',
+            u'/v1/search?query={query}&offset=0&limit=20&type=album',
             Album
         ),
         'artists': (
-            '/v1/search?query={query}&offset=0&limit=20&type=artist',
+            u'/v1/search?query={query}&offset=0&limit=20&type=artist',
             None
         ),
     }

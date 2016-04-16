@@ -494,6 +494,8 @@ class Player(object):
             self.song_order.append(len(self.song_order))
             # Add the song to the current song list
             self.song_list.append(item)
+            if not self.current_track:
+                self.play_current_song(start_playing=False)
         elif hasattr(item, 'tracks'):
             for track in item.tracks:
                 if track.availability != spotify.TrackAvailability.UNAVAILABLE:
@@ -586,7 +588,7 @@ class Player(object):
         self.end_of_track.set()
         thread.interrupt_main()
 
-    def play_current_song(self):
+    def play_current_song(self, start_playing=True):
         '''
         Plays the current song
         :returns: None
@@ -606,7 +608,8 @@ class Player(object):
         )
 
         self.player.load(self.current_track)
-        self.play_pause()
+        if start_playing:
+            self.play_pause()
 
         self.seconds_played = 0
 
