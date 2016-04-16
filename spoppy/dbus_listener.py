@@ -24,9 +24,9 @@ except ImportError:
     )
 
 try:
-    import gobject
+    from gi.repository import GObject
 except ImportError:
-    gobject = None
+    GObject = None
     logger.warning(
         'gobject not installed, you won\'t be able to control the '
         'player via DBus'
@@ -39,7 +39,7 @@ if dbus:
             self.lifecycle = lifecycle
 
         def run(self):
-            gobject.threads_init()
+            GObject.threads_init()
             dbus.mainloop.glib.threads_init()
             dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
             bus_name = dbus.service.BusName(
@@ -50,7 +50,7 @@ if dbus:
                 bus_name, "/com/spoppy"
             )
 
-            self._loop = gobject.MainLoop()
+            self._loop = GObject.MainLoop()
             self._loop.run()
 
         def stop(self):
@@ -104,7 +104,7 @@ class DBusListener(threading.Thread):
     def __init__(self, lifecycle, stop_event, *args):
         self.lifecycle = lifecycle
         self.stop_event = stop_event
-        self.should_run = dbus and gobject
+        self.should_run = dbus and GObject
         if not self.should_run:
             logger.warning(
                 'DBusListener thread aborting because of missing dependencies'
