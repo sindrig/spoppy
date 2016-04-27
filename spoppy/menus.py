@@ -2,15 +2,16 @@ import logging
 import threading
 import webbrowser
 from collections import namedtuple
+from itertools import chain
 
 from spotify import TrackAvailability
 
 from . import responses
 from .http_server import oAuthServerThread
+from .radio import Recommendations
 from .search import search
 from .util import (format_album, format_track, get_duration_from_s,
                    single_char_with_timeout, sorted_menu_items)
-from .radio import Recommendations
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +245,7 @@ class PlayListOverview(Menu):
         for i, playlist in playlists:
             menu_item = PlayListSelected(self.navigator)
             menu_item.playlist = playlist.link.as_playlist()
-            results[str(i+1).rjust(4)] = MenuValue(
+            results[str(i + 1).rjust(4)] = MenuValue(
                 menu_item.playlist.name, menu_item
             )
         return results
@@ -393,6 +394,14 @@ class AlbumSearchResults(TrackSearchResults):
             )
         return results
 
+    def get_mock_playlist(self):
+        track_results = list(chain(*[
+            album.tracks for album in self.search.results.results
+        ]))
+        return MockPlaylist(
+            self.get_mock_playlist_name(), track_results
+        )
+
 
 class TrackSearch(Menu):
     is_searching = False
@@ -513,7 +522,7 @@ class PlayListSelected(Menu):
                 self.get_tracks()
                 if track.availability != TrackAvailability.UNAVAILABLE
             ):
-                results[str(i+1).rjust(4)] = MenuValue(
+                results[str(i + 1).rjust(4)] = MenuValue(
                     format_track(track), self.select_song(i)
                 )
             if results:
