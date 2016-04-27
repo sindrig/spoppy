@@ -72,11 +72,10 @@ class Search(threading.Thread):
         try:
             logger.debug('Getting %s' % self.endpoint)
             r = requests.get(self.endpoint)
-        except requests.exceptions.ConnectionError:
+            r.raise_for_status()
+        except requests.exceptions.RequestException:
             self.results = self.get_empty_results()
         else:
-            r.raise_for_status()
-
             response_data = r.json()[self.search_type]
             self.handle_results(response_data)
 
