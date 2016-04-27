@@ -92,6 +92,9 @@ class LifeCycle(object):
                 'OFFLINE',
                 'UNDEFINED',
             )
+            logger.debug(
+                'Checking connection state %s' % session.connection.state
+            )
             for state in KNOWN_STATES:
                 if (
                     session.connection.state == getattr(
@@ -99,8 +102,25 @@ class LifeCycle(object):
                     )
                 ):
                     logger.debug('Received connection state %s' % state)
-            if session.connection.state is spotify.ConnectionState.LOGGED_IN:
+            if session.connection.state == spotify.ConnectionState.LOGGED_IN:
                 logged_in.set()
+            disconnect_state = spotify.ConnectionState.DISCONNECTED
+            if session.connection.state == disconnect_state:
+                if self.player.is_playing():
+                    self.player.play_pause()
+                self.player.state = self.player.DISCONNECTED_INDICATOR
+                logger.warning(
+                    'Spoppy has been disconnected. DO YOU HAVE INTERNET?'
+                )
+
+            else:
+                if (
+                    self.player.state == self.player.DISCONNECTED_INDICATOR and
+                    not self.player.is_playing()
+                ):
+                    logger.debug('We got internet back, playing!')
+                    self.player.play_pause()
+                self.player.state = None
 
         def on_lost_play_token(session):
             if self.player.is_playing():
@@ -124,7 +144,7 @@ class LifeCycle(object):
         logger.debug('Actually logging in now...')
         self._pyspotify_session.login(self.username, self.password)
 
-        logged_in.wait(6)
+        logged_in.wait(5)
         if logged_in.is_set():
             logger.debug('PySpotify logged in!')
             return True

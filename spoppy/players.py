@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class Player(object):
 
     REPEAT_OPTIONS = ['all', 'one']
+    DISCONNECTED_INDICATOR = 'disconnected'
 
     shuffle = False
     repeat = REPEAT_OPTIONS[0]
@@ -71,6 +72,7 @@ class Player(object):
             self.reversed_actions[action_name].append(
                 key_names.get(key) or key.decode('utf-8')
             )
+        self.state = None
 
     def clear(self):
         '''
@@ -158,7 +160,7 @@ class Player(object):
         mins_played = get_duration_from_s(seconds_played)
 
         return (
-            self.player.state,
+            self.state or self.player.state,
             mins_played,
             percent_played,
             self.current_track_duration
@@ -608,7 +610,7 @@ class Player(object):
         )
 
         self.player.load(self.current_track)
-        if start_playing:
+        if start_playing and not self.state == self.DISCONNECTED_INDICATOR:
             self.play_pause()
 
         self.seconds_played = 0
