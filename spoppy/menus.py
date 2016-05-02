@@ -211,6 +211,10 @@ class MainMenu(Menu):
             ),
             'st': MenuValue('Search for tracks', TrackSearch(self.navigator)),
             'sa': MenuValue('Search for albums', AlbumSearch(self.navigator)),
+            'ss': MenuValue(
+                'Search for artists',
+                ArtistSearch(self.navigator)
+            ),
         }
         if not self.navigator.spotipy_client:
             res['li'] = MenuValue(
@@ -386,7 +390,6 @@ class AlbumSearchResults(TrackSearchResults):
     def get_options_from_search(self):
         results = {}
         for i, album in enumerate(
-            album for album in
             self.search.results.results
         ):
             results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
@@ -397,6 +400,36 @@ class AlbumSearchResults(TrackSearchResults):
     def get_mock_playlist(self):
         track_results = list(chain(*[
             album.tracks for album in self.search.results.results
+        ]))
+        return MockPlaylist(
+            self.get_mock_playlist_name(), track_results
+        )
+
+
+class ArtistSearchResults(TrackSearchResults):
+    search = None
+
+    def select_artist(self, artist_idx):
+        def artist_selected():
+            res = ArtistSelected(self.navigator)
+            res.artist = self.search.results.results[artist_idx]
+            return res
+        return artist_selected
+
+    def get_options_from_search(self):
+        results = {}
+        for i, artist in enumerate(
+            self.search.results.results
+        ):
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
+                artist.name, self.select_artist(i)
+            )
+        return results
+
+    def get_mock_playlist(self):
+        track_results = list(chain(*[
+            artist.browse().load().tracks for
+            artist in self.search.results.results
         ]))
         return MockPlaylist(
             self.get_mock_playlist_name(), track_results
@@ -464,6 +497,11 @@ class TrackSearch(Menu):
 class AlbumSearch(TrackSearch):
     search_type = 'albums'
     result_cls = AlbumSearchResults
+
+
+class ArtistSearch(TrackSearch):
+    search_type = 'artists'
+    result_cls = ArtistSearchResults
 
 
 class PlayListSelected(Menu):
@@ -574,6 +612,22 @@ class AlbumSelected(PlayListSelected):
 
     def get_header(self):
         return 'Album [%s] selected' % self.get_name()
+
+
+class ArtistSelected(AlbumSelected):
+    artist = None
+    _tracks = None
+
+    def get_tracks(self):
+        if not self._tracks:
+            self._tracks = self.artist.browse().load().tracks
+        return self._tracks
+
+    def get_name(self):
+        return self.artist.name
+
+    def get_header(self):
+        return 'Artist [%s] selected' % self.get_name()
 
 
 class SongSelectedWhilePlaying(Menu):
