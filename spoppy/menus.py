@@ -433,7 +433,7 @@ class ArtistSearchResults(TrackSearchResults):
 
     def get_mock_playlist(self):
         track_results = list(chain(*[
-            artist.browse().load().tracks for
+            artist.tracks for
             artist in self.search.results.results
         ]))
         return MockPlaylist(
