@@ -101,6 +101,8 @@ class Menu(object):
     BACKSPACE = b'\x7f'
     UP_ARROW = b'\x1b[A'
     DOWN_ARROW = b'\x1b[B'
+    PAGE_UP = b'\x1b[5~'
+    PAGE_DOWN = b'\x1b[6~'
     PAGE = 0
 
     def __init__(self, navigator):
@@ -126,13 +128,16 @@ class Menu(object):
         if response == Menu.BACKSPACE:
             self.filter = self.filter[:-1]
             return responses.NOOP
-        elif response == Menu.UP_ARROW:
-            logger.debug('Got UP_ARROW')
+        elif response in (Menu.UP_ARROW, Menu.PAGE_UP):
+            logger.debug('Got UP_ARROW/PAGE_UP')
             self.PAGE = max([self.PAGE - 1, 0])
             return responses.NOOP
-        elif response == Menu.DOWN_ARROW:
-            logger.debug('Got DOWN_ARROW')
+        elif response in (Menu.DOWN_ARROW, Menu.PAGE_DOWN):
+            logger.debug('Got DOWN_ARROW/PAGE_DOWN')
             self.PAGE += 1
+            return responses.NOOP
+        elif response.startswith(b'\x1b'):
+            logger.debug('Got unknown character %s' % repr(response))
             return responses.NOOP
 
         self.filter += response.decode('utf-8')
@@ -546,7 +551,7 @@ class PlayListSelected(Menu):
     def get_tracks(self):
         return [
             track for track in
-            self.get_tracks()
+            self.playlist.tracks
             if track.availability != TrackAvailability.UNAVAILABLE
         ]
 
