@@ -117,6 +117,6 @@ class Search(threading.Thread):
             ]
         elif self.search_type == 'artists':
             return [
-                item.browse().load().artist for item in items
+                item.browse().load() for item in items
             ]
         raise TypeError('Unknown search type %s' % self.search_type)

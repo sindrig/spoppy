@@ -418,11 +418,11 @@ class ArtistSearchResults(TrackSearchResults):
 
     def get_options_from_search(self):
         results = {}
-        for i, artist in enumerate(
+        for i, artist_browser in enumerate(
             self.search.results.results
         ):
             results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
-                artist.name, self.select_artist(i)
+                artist_browser.artist.name, self.select_artist(i)
             )
         return results
 
@@ -544,7 +544,11 @@ class PlayListSelected(Menu):
         return self
 
     def get_tracks(self):
-        return self.playlist.tracks
+        return [
+            track for track in
+            self.get_tracks()
+            if track.availability != TrackAvailability.UNAVAILABLE
+        ]
 
     def get_name(self):
         return self.playlist.name
@@ -555,11 +559,7 @@ class PlayListSelected(Menu):
             results['y'] = MenuValue('Yes', self.do_delete_playlist)
             results['n'] = MenuValue('No', self.cancel_delete_playlist)
         else:
-            for i, track in enumerate(
-                track for track in
-                self.get_tracks()
-                if track.availability != TrackAvailability.UNAVAILABLE
-            ):
+            for i, track in enumerate(self.get_tracks()):
                 results[str(i + 1).rjust(4)] = MenuValue(
                     format_track(track), self.select_song(i)
                 )
@@ -591,6 +591,12 @@ class PlayListSelected(Menu):
             return 'Are you sure you want to delete playlist [%s]' % (
                 self.get_name()
             )
+        return '%s (total %d tracks)' % (
+            self.get_header_text(),
+            len(self.get_tracks())
+        )
+
+    def get_header_text(self):
         return 'Playlist [%s] selected' % self.get_name()
 
 
@@ -610,7 +616,7 @@ class AlbumSelected(PlayListSelected):
     def get_name(self):
         return format_album(self.album)
 
-    def get_header(self):
+    def get_header_text(self):
         return 'Album [%s] selected' % self.get_name()
 
 
@@ -620,13 +626,14 @@ class ArtistSelected(AlbumSelected):
 
     def get_tracks(self):
         if not self._tracks:
-            self._tracks = self.artist.browse().load().tracks
+            self._tracks = self.artist.tracks
+            logger.debug('Artist has %d tracks' % len(self._tracks))
         return self._tracks
 
     def get_name(self):
-        return self.artist.name
+        return self.artist.artist.name
 
-    def get_header(self):
+    def get_header_text(self):
         return 'Artist [%s] selected' % self.get_name()
 
 
