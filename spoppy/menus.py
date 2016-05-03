@@ -101,6 +101,8 @@ class Menu(object):
     BACKSPACE = b'\x7f'
     UP_ARROW = b'\x1b[A'
     DOWN_ARROW = b'\x1b[B'
+    PAGE_UP = b'\x1b[5~'
+    PAGE_DOWN = b'\x1b[6~'
     PAGE = 0
 
     def __init__(self, navigator):
@@ -126,13 +128,16 @@ class Menu(object):
         if response == Menu.BACKSPACE:
             self.filter = self.filter[:-1]
             return responses.NOOP
-        elif response == Menu.UP_ARROW:
-            logger.debug('Got UP_ARROW')
+        elif response in (Menu.UP_ARROW, Menu.PAGE_UP):
+            logger.debug('Got UP_ARROW/PAGE_UP')
             self.PAGE = max([self.PAGE - 1, 0])
             return responses.NOOP
-        elif response == Menu.DOWN_ARROW:
-            logger.debug('Got DOWN_ARROW')
+        elif response in (Menu.DOWN_ARROW, Menu.PAGE_DOWN):
+            logger.debug('Got DOWN_ARROW/PAGE_DOWN')
             self.PAGE += 1
+            return responses.NOOP
+        elif response.startswith(b'\x1b'):
+            logger.debug('Got unknown character %s' % repr(response))
             return responses.NOOP
 
         self.filter += response.decode('utf-8')
@@ -211,6 +216,10 @@ class MainMenu(Menu):
             ),
             'st': MenuValue('Search for tracks', TrackSearch(self.navigator)),
             'sa': MenuValue('Search for albums', AlbumSearch(self.navigator)),
+            'ss': MenuValue(
+                'Search for artists',
+                ArtistSearch(self.navigator)
+            ),
         }
         if not self.navigator.spotipy_client:
             res['li'] = MenuValue(
@@ -386,7 +395,6 @@ class AlbumSearchResults(TrackSearchResults):
     def get_options_from_search(self):
         results = {}
         for i, album in enumerate(
-            album for album in
             self.search.results.results
         ):
             results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
@@ -397,6 +405,36 @@ class AlbumSearchResults(TrackSearchResults):
     def get_mock_playlist(self):
         track_results = list(chain(*[
             album.tracks for album in self.search.results.results
+        ]))
+        return MockPlaylist(
+            self.get_mock_playlist_name(), track_results
+        )
+
+
+class ArtistSearchResults(TrackSearchResults):
+    search = None
+
+    def select_artist(self, artist_idx):
+        def artist_selected():
+            res = ArtistSelected(self.navigator)
+            res.artist = self.search.results.results[artist_idx]
+            return res
+        return artist_selected
+
+    def get_options_from_search(self):
+        results = {}
+        for i, artist_browser in enumerate(
+            self.search.results.results
+        ):
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
+                artist_browser.artist.name, self.select_artist(i)
+            )
+        return results
+
+    def get_mock_playlist(self):
+        track_results = list(chain(*[
+            artist.tracks for
+            artist in self.search.results.results
         ]))
         return MockPlaylist(
             self.get_mock_playlist_name(), track_results
@@ -466,6 +504,11 @@ class AlbumSearch(TrackSearch):
     result_cls = AlbumSearchResults
 
 
+class ArtistSearch(TrackSearch):
+    search_type = 'artists'
+    result_cls = ArtistSearchResults
+
+
 class PlayListSelected(Menu):
     playlist = None
     deleting = False
@@ -506,7 +549,11 @@ class PlayListSelected(Menu):
         return self
 
     def get_tracks(self):
-        return self.playlist.tracks
+        return [
+            track for track in
+            self.playlist.tracks
+            if track.availability != TrackAvailability.UNAVAILABLE
+        ]
 
     def get_name(self):
         return self.playlist.name
@@ -517,11 +564,7 @@ class PlayListSelected(Menu):
             results['y'] = MenuValue('Yes', self.do_delete_playlist)
             results['n'] = MenuValue('No', self.cancel_delete_playlist)
         else:
-            for i, track in enumerate(
-                track for track in
-                self.get_tracks()
-                if track.availability != TrackAvailability.UNAVAILABLE
-            ):
+            for i, track in enumerate(self.get_tracks()):
                 results[str(i + 1).rjust(4)] = MenuValue(
                     format_track(track), self.select_song(i)
                 )
@@ -553,6 +596,12 @@ class PlayListSelected(Menu):
             return 'Are you sure you want to delete playlist [%s]' % (
                 self.get_name()
             )
+        return '%s (total %d tracks)' % (
+            self.get_header_text(),
+            len(self.get_tracks())
+        )
+
+    def get_header_text(self):
         return 'Playlist [%s] selected' % self.get_name()
 
 
@@ -572,8 +621,25 @@ class AlbumSelected(PlayListSelected):
     def get_name(self):
         return format_album(self.album)
 
-    def get_header(self):
+    def get_header_text(self):
         return 'Album [%s] selected' % self.get_name()
+
+
+class ArtistSelected(AlbumSelected):
+    artist = None
+    _tracks = None
+
+    def get_tracks(self):
+        if not self._tracks:
+            self._tracks = self.artist.tracks
+            logger.debug('Artist has %d tracks' % len(self._tracks))
+        return self._tracks
+
+    def get_name(self):
+        return self.artist.artist.name
+
+    def get_header_text(self):
+        return 'Artist [%s] selected' % self.get_name()
 
 
 class SongSelectedWhilePlaying(Menu):

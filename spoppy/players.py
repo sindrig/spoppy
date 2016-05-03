@@ -240,6 +240,7 @@ class Player(object):
             right_side_items = [
                 'Shuffle on' if self.shuffle else '',
                 'Repeat: %s' % self.repeat,
+                '%d of %d' % (self.current_track_idx + 1, len(self.song_order))
             ]
             songs_to_show = (
                 list(range(

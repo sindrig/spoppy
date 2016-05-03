@@ -9,6 +9,7 @@ import threading
 import requests
 from spotify.track import Track, TrackAvailability
 from spotify.album import Album
+from spotify.artist import Artist
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class Search(threading.Thread):
         ),
         'artists': (
             u'/v1/search?query={query}&offset=0&limit=20&type=artist',
-            None
+            Artist
         ),
     }
     BASE_URL = 'https://api.spotify.com'
@@ -64,6 +65,8 @@ class Search(threading.Thread):
             self.BASE_URL + endpoint.format(query=self.query)
         )
 
+        self.results = self.get_empty_results()
+
         super(Search, self).__init__()
 
         self.start()
@@ -73,13 +76,14 @@ class Search(threading.Thread):
             logger.debug('Getting %s' % self.endpoint)
             r = requests.get(self.endpoint)
             r.raise_for_status()
-        except requests.exceptions.RequestException:
-            self.results = self.get_empty_results()
-        else:
             response_data = r.json()[self.search_type]
-            self.handle_results(response_data)
-
-        self.loaded_event.set()
+            self.results = self.handle_results(response_data)
+        except requests.exceptions.RequestException:
+            logger.exception('RequestException')
+        except Exception:
+            logger.exception('Something went wrong while handling results')
+        finally:
+            self.loaded_event.set()
 
     def get_empty_results(self):
         return SearchResults(self.query, [], 0, 0)
@@ -90,7 +94,7 @@ class Search(threading.Thread):
             for item in response_data['items']
         ])
 
-        self.results = SearchResults(
+        return SearchResults(
             self.query,
             item_results,
             response_data['offset'],
@@ -110,5 +114,9 @@ class Search(threading.Thread):
             return [
                 item.load() for item in items
                 if item.availability != TrackAvailability.UNAVAILABLE
+            ]
+        elif self.search_type == 'artists':
+            return [
+                item.browse().load() for item in items
             ]
         raise TypeError('Unknown search type %s' % self.search_type)
