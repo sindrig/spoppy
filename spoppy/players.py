@@ -185,6 +185,7 @@ class Player(object):
             char = single_char_with_timeout(timeout=1.5)
             if char:
                 logger.debug('Got some char: %s' % char)
+                char = char.lower()
             response = self.actions.get(char, NOOP)
             if response != NOOP:
                 if callable(response):
