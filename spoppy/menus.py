@@ -950,6 +950,8 @@ class RadioSelected(TrackSearchResults):
     radio_name = ''
 
     def get_header(self):
+        if getattr(self.search.results, 'message'):
+            return self.search.results.message
         if not self.search.results.total:
             return 'Song cannot be played in radio, sorry!'
         return 'Radio list "%s" generated:' % self.get_mock_playlist_name()
