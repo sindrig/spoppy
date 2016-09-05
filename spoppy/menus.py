@@ -625,7 +625,38 @@ class AlbumSelected(PlayListSelected):
         return 'Album [%s] selected' % self.get_name()
 
 
-class ArtistSelected(AlbumSelected):
+class BanArtistMixin(object):
+    def get_ban_options(self):
+        results = {}
+        artist = self.get_artist()
+        if artist:
+            if self.navigator.is_artist_banned(artist):
+                results['ub'] = MenuValue(
+                    "Unban artist",
+                    self.unban_artist()
+                )
+            else:
+                results['ba'] = MenuValue(
+                    "Ban artist (you won't be able to "
+                    "play songs by this artist)",
+                    self.ban_artist()
+                )
+        return results
+
+    def ban_artist(self):
+        def do_ban_artist():
+            self.navigator.ban_artist(self.get_artist())
+            return self
+        return do_ban_artist
+
+    def unban_artist(self):
+        def do_unban_artist():
+            self.navigator.unban_artist(self.get_artist())
+            return self
+        return do_unban_artist
+
+
+class ArtistSelected(BanArtistMixin, AlbumSelected):
     artist = None
     _tracks = None
 
@@ -641,8 +672,16 @@ class ArtistSelected(AlbumSelected):
     def get_header_text(self):
         return 'Artist [%s] selected' % self.get_name()
 
+    def get_artist(self):
+        return self.artist
 
-class SongSelectedWhilePlaying(Menu):
+    def get_options(self):
+        results = self.get_ban_options()
+        results.update(super(ArtistSelected, self).get_options())
+        return results
+
+
+class SongSelectedWhilePlaying(BanArtistMixin, Menu):
     playlist = None
     track = None
 
@@ -661,7 +700,7 @@ class SongSelectedWhilePlaying(Menu):
 
     # Only thing we know here is that the player is currently playing something
     def get_options(self):
-        results = {}
+        results = self.get_ban_options()
         if self.playlist:
             if self.navigator.player.is_playing():
                 msg = 'Replace currently playing with [%s]' % (
@@ -724,6 +763,10 @@ class SongSelectedWhilePlaying(Menu):
             artist.name for artist in self.track.artists
             if artist.name
         )
+
+    def get_artist(self):
+        if len(self.track.artists) == 1:
+            return self.track.artists[0]
 
 
 class SavePlaylist(Menu):
