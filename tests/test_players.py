@@ -412,6 +412,7 @@ class TestPlayer(unittest.TestCase):
         TrackLoaded = namedtuple('TrackLoaded', ('duration', 'name'))
         track_loaded = TrackLoaded(1, 'foo')
         patched_track.load.return_value = track_loaded
+        patched_track.artists = []
         patched_threading.Event.return_value = 'Event'
         patched_get_track.return_value = patched_track
         patched_get_duration.return_value = 'Duration'
