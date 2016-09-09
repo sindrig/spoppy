@@ -614,7 +614,8 @@ class Player(object):
 
         for artist in current_track.artists:
             if self.navigator.is_artist_banned(artist):
-                return self.next_song()
+                # Remove banned song from queue as soon as it's up
+                return self.remove_current_song()
 
         self.end_of_track = threading.Event()
         self.current_track = current_track.load()
