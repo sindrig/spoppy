@@ -242,9 +242,12 @@ class Player(object):
 
                 ])
             right_side_items = [
-                'Shuffle on' if self.shuffle else '',
+                '%d of %d' % (
+                    self.current_track_idx + 1, len(self.song_order)
+                ),
+                'Total playlist length: %s' % self.get_total_playlist_length(),
                 'Repeat: %s' % self.repeat,
-                '%d of %d' % (self.current_track_idx + 1, len(self.song_order))
+                'Shuffle on' if self.shuffle else '',
             ]
             songs_to_show = (
                 list(range(
@@ -259,13 +262,13 @@ class Player(object):
             )
             for song_idx in songs_to_show:
                 song = self.get_track_by_idx(song_idx)
-                right_side = right_side_items and right_side_items.pop()
+                right_side = right_side_items and right_side_items.pop(0)
                 if song_idx == self.current_track_idx:
                     if song_idx != songs_to_show[0]:
                         # Small spacing around current...
                         res.append(('', right_side or ''))
                         right_side = (
-                            right_side_items and right_side_items.pop()
+                            right_side_items and right_side_items.pop(0)
                         )
                     formatted_song = '>>>%s' % format_track(
                         song,
@@ -291,6 +294,10 @@ class Player(object):
             res.append('No songs found in playlist!')
 
         return res
+
+    def get_total_playlist_length(self):
+        total_seconds = sum([song.duration for song in self.song_list]) / 1000
+        return get_duration_from_s(total_seconds, max_length=None)
 
     def trigger_redraw(self):
         '''

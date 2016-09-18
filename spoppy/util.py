@@ -96,22 +96,28 @@ def sorted_menu_items(items):
         yield key, value
 
 
-def get_duration_from_s(s):
+def get_duration_from_s(s, max_length=59 * 60 + 59):
     '''
     Formats seconds as "%M:%S"
+    If max_length exceed 60, give format in "%H:%M:%S"
     :param s: Seconds in int/float
+    :param max_length: Max length in seconds. Default is 59 minutes, 59 seconds
     :returns: s formatted as "%M:%S"
     '''
-    # Max length is 59 minutes, 59 seconds
-    MAX_LENGTH = 59 * 60 + 59
     if not isinstance(s, (int, float)):
         raise TypeError('Seconds must be int/float')
     elif s < 0:
         raise TypeError('Seconds must be positive')
-    elif s > MAX_LENGTH:
-        s = MAX_LENGTH
-    return '%s:%s' % (
-        str(int(s / 60)).zfill(2),
+    elif max_length and s > max_length:
+        s = max_length
+    m = s / 60
+    h = ''
+    if m > 60:
+        h = ('%s:' % int(m / 60)).zfill(3)
+        m = m % 60
+    return '%s%s:%s' % (
+        h,
+        str(int(m)).zfill(2),
         str(int(s % 60)).zfill(2)
     )
 
