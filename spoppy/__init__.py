@@ -10,7 +10,7 @@ logger = logging.getLogger('spoppy.main')
 
 
 def get_version():
-    return '1.7.0'
+    return '1.7.1'
 
 
 if click:
@@ -25,14 +25,29 @@ if click:
 
         lock = LockFile('/tmp/spoppy')
         try:
-            # Try for 5s to acquire the lock
-            lock.acquire(5)
-        except LockTimeout:
-            click.echo('Could not acquire lock, is spoppy running?')
-            click.echo(
-                'If you\'re sure that spoppy is not running, '
-                'try removing the lock file %s' % lock.lock_file
-            )
+            try:
+                # Try for 1s to acquire the lock
+                lock.acquire(1)
+            except LockTimeout:
+                click.echo('Could not acquire lock, is spoppy running?')
+                click.echo(
+                    'If you\'re sure that spoppy is not running, '
+                    'try removing the lock file %s' % lock.lock_file
+                )
+                click.echo(
+                    'You can try removing the lock file by responding [rm]. '
+                    'spoppy will exit on all other inputs'
+                )
+                try:
+                    response = raw_input('')
+                except NameError:
+                    response = input('')
+                if response == 'rm':
+                    lock.break_lock()
+                else:
+                    raise TypeError('Could not get lock')
+        except TypeError:
+            pass
         else:
 
             if username and password:
