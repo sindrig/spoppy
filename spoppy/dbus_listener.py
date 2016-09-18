@@ -37,6 +37,7 @@ if dbus:
 
         def __init__(self, lifecycle):
             self.lifecycle = lifecycle
+            self.running = True
 
         def run(self):
             GObject.threads_init()
@@ -51,9 +52,15 @@ if dbus:
             )
 
             self._loop = GObject.MainLoop()
-            self._loop.run()
+            while self.running:
+                try:
+                    logger.debug('Starting dbus loop')
+                    self._loop.run()
+                except KeyboardInterrupt:
+                    logger.debug('Loop interrupted, will restart')
 
         def stop(self):
+            self.running = False
             self._loop.quit()
 
         @dbus.service.method(
