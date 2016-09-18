@@ -4,16 +4,22 @@ import select
 import sys
 import threading
 
+import termios
+import tty
+from appdirs import user_cache_dir
+
+from . import responses
+
 try:
     import thread
 except ImportError:
     import _thread as thread
-import termios
-import tty
 
-from . import responses
 
 logger = logging.getLogger(__name__)
+artist_db_location = os.path.join(
+    user_cache_dir(appname='spoppy'), 'banned_spoppy_artists.txt'
+)
 
 
 # Initially taken from https://github.com/magmax/python-readchar
@@ -46,14 +52,22 @@ def single_char_with_timeout(timeout=5):
     return response
 
 
-def format_track(track):
-    return '%s by %s' % (
+def format_track(track, extra_text=''):
+    return '%s by %s %s' % (
         track.name,
         ' & '.join(
             artist.name for artist in track.artists
             if artist.name
-        )
+        ),
+        extra_text
     )
+
+
+def artist_banned_text(navigator, track):
+    for artist in track.artists:
+        if navigator.is_artist_banned(artist):
+            return '[[~~~ARTIST IS BANNED~~~]'
+    return ''
 
 
 def format_album(album_browser):
@@ -64,9 +78,16 @@ def format_album(album_browser):
     )
 
 
+def get_sort_key_for_menu(item):
+    if item[0].lstrip().isdigit():
+        # Force digits at the end of the list
+        return '~{}'.format(item[0])
+    return item[0]
+
+
 def sorted_menu_items(items):
     global_items = []
-    for key, value in sorted(items):
+    for key, value in sorted(items, key=get_sort_key_for_menu):
         if value.destination in responses.ALL:
             global_items.append((key, value))
         else:
@@ -93,6 +114,42 @@ def get_duration_from_s(s):
         str(int(s / 60)).zfill(2),
         str(int(s % 60)).zfill(2)
     )
+
+
+def get_artist_uri(artist):
+    if hasattr(artist, 'artist'):
+        artist = artist.artist
+    return artist.link.uri
+
+
+def ban_artist(uri):
+    logger.debug('Banning artist {}'.format(uri))
+    with open(artist_db_location, 'a') as f:
+        f.write('{}\n'.format(uri))
+
+
+def unban_artist(uri):
+    logger.debug('Unbanning artist {}'.format(uri))
+    banned_artists = []
+    try:
+        with open(artist_db_location, 'r') as f:
+            for line in f.readlines():
+                if line.strip() != uri:
+                    banned_artists.append(line)
+    except IOError:
+        pass
+    with open(artist_db_location, 'w') as f:
+        for artist in banned_artists:
+            f.write('{}\n'.format(artist))
+
+
+def get_banned_artist_uris():
+    try:
+        with open(artist_db_location, 'r') as f:
+            return [line.strip() for line in f.readlines()]
+    except IOError:
+        return []
+
 
 if __name__ == '__main__':
     if sys.argv[-1] == 'wrapper':

@@ -12,7 +12,10 @@ except ImportError:
 import spotify
 
 from .responses import NOOP, UP
-from .util import single_char_with_timeout, format_track, get_duration_from_s
+from .util import (
+    single_char_with_timeout, format_track, get_duration_from_s,
+    artist_banned_text
+)
 from .menus import SavePlaylist, SongSelectedWhilePlaying
 
 logger = logging.getLogger(__name__)
@@ -264,9 +267,15 @@ class Player(object):
                         right_side = (
                             right_side_items and right_side_items.pop()
                         )
-                    formatted_song = '>>>%s' % format_track(song)
+                    formatted_song = '>>>%s' % format_track(
+                        song,
+                        artist_banned_text(self.navigator, song)
+                    )
                 else:
-                    formatted_song = format_track(song)
+                    formatted_song = format_track(
+                        song,
+                        artist_banned_text(self.navigator, song)
+                    )
                 res.append((formatted_song, right_side or ''))
                 if song_idx == self.current_track_idx:
                     if song_idx != songs_to_show[-1]:
@@ -603,6 +612,11 @@ class Player(object):
         if not current_track:
             self.current_track = None
             return
+
+        for artist in current_track.artists:
+            if self.navigator.is_artist_banned(artist):
+                # Remove banned song from queue as soon as it's up
+                return self.remove_current_song()
 
         self.end_of_track = threading.Event()
         self.current_track = current_track.load()

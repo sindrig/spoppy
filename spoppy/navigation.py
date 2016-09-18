@@ -7,6 +7,9 @@ from .lifecycle import LifeCycle
 from .players import Player
 from .terminal import get_terminal_size
 from .config import clear_config
+from .util import (
+    ban_artist, unban_artist, get_banned_artist_uris, get_artist_uri
+)
 
 try:
     # py2.7+
@@ -43,6 +46,11 @@ class Leifur(object):
             self.lifecycle.start_lifecycle_services()
             logger.debug('LifeCycle services started')
             self.player.initialize()
+
+            logger.debug('Getting banned artists')
+            self.banned_artists = get_banned_artist_uris()
+            logger.info('Banned artists are %s' % (self.banned_artists, ))
+
             main_menu = menus.MainMenu(self)
             self.navigate_to(main_menu)
         else:
@@ -139,3 +147,21 @@ class Leifur(object):
     def get_ui_height(self):
         # We want to return the height allocated to the menu
         return get_terminal_size().height - 4
+
+    def is_artist_banned(self, artist):
+        uri = get_artist_uri(artist)
+        return uri in self.banned_artists
+
+    def ban_artist(self, artist):
+        uri = get_artist_uri(artist)
+        logger.debug('Banning artist {}'.format(uri))
+        self.banned_artists.append(uri)
+        logger.info('{}'.format(self.banned_artists))
+        return ban_artist(uri)
+
+    def unban_artist(self, artist):
+        uri = get_artist_uri(artist)
+        logger.debug('Unbanning artist {}'.format(uri))
+        self.banned_artists.remove(uri)
+        logger.info('{}'.format(self.banned_artists))
+        return unban_artist(uri)
