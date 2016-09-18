@@ -52,14 +52,14 @@ def single_char_with_timeout(timeout=5):
     return response
 
 
-def format_track(track, extra_text=''):
+def format_track(track, extra_text=None):
     return '%s by %s %s' % (
         track.name,
         ' & '.join(
             artist.name for artist in track.artists
             if artist.name
         ),
-        extra_text
+        extra_text or ''
     )
 
 
