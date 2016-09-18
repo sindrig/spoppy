@@ -12,6 +12,7 @@ logger = logging.getLogger('spoppy.main')
 def get_version():
     return '1.6.0'
 
+
 if click:
     @click.command()
     @click.argument('username', required=False)
