@@ -520,3 +520,19 @@ class TestPlayer(unittest.TestCase):
         SavePlaylist.callback(playlist)
         self.assertEqual(self.player.playlist, playlist)
         self.assertEqual(self.player.original_playlist_name, 'foobar')
+
+    @patch('spoppy.players.get_duration_from_s')
+    def test_get_total_playlist_length(self, patched_get_duration_from_s):
+        # total length of list is 71000 ms = 71 s
+        expected_duration = 'Expected this duration message'
+        patched_get_duration_from_s.return_value = expected_duration
+        self.player.song_list = [
+            utils.Track('', '', duration=1000),
+            utils.Track('', '', duration=10000),
+            utils.Track('', '', duration=60000),
+        ]
+        result = self.player.get_total_playlist_length()
+        patched_get_duration_from_s.assert_called_once_with(
+            71, max_length=None
+        )
+        self.assertEquals(result, expected_duration)
