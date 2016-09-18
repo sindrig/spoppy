@@ -689,6 +689,10 @@ class SongSelectedWhilePlaying(BanArtistMixin, Menu):
         self.navigator.player.add_to_queue(self.track)
         return responses.UP
 
+    def add_to_temp_queue(self):
+        self.navigator.player.add_play_then_remove(self.track)
+        return self.navigator.player
+
     def replace_current(self):
         self.navigator.player.load_playlist(
             self.playlist
@@ -712,9 +716,14 @@ class SongSelectedWhilePlaying(BanArtistMixin, Menu):
                 msg,
                 self.replace_current
             )
+        formatted_track = format_track(self.track)
         results['aq'] = MenuValue(
-            'Add [%s] to queue' % format_track(self.track),
+            'Add [%s] to queue' % formatted_track,
             self.add_to_queue
+        )
+        results['tmp'] = MenuValue(
+            'Add [%s] temporary to playlist' % formatted_track,
+            self.add_to_temp_queue
         )
         if self.track.album:
             res = AlbumSelected(self.navigator)

@@ -94,6 +94,7 @@ class Player(object):
         self.playlist = None
         self.song_list = []
         self._trigger_redraw = False
+        self.temporary_song = None
 
     def has_been_loaded(self):
         '''
@@ -263,6 +264,13 @@ class Player(object):
             for song_idx in songs_to_show:
                 song = self.get_track_by_idx(song_idx)
                 right_side = right_side_items and right_side_items.pop(0)
+                extra_text = (
+                    artist_banned_text(self.navigator, song) or
+                    (
+                        self.song_order[song_idx] == self.temporary_song and
+                        '[temporary]'
+                    )
+                )
                 if song_idx == self.current_track_idx:
                     if song_idx != songs_to_show[0]:
                         # Small spacing around current...
@@ -270,26 +278,20 @@ class Player(object):
                         right_side = (
                             right_side_items and right_side_items.pop(0)
                         )
-                    formatted_song = '>>>%s' % format_track(
-                        song,
-                        artist_banned_text(self.navigator, song)
-                    )
+                    formatted_song = '>>>%s' % format_track(song, extra_text)
                 else:
-                    formatted_song = format_track(
-                        song,
-                        artist_banned_text(self.navigator, song)
-                    )
+                    formatted_song = format_track(song, extra_text)
                 res.append((formatted_song, right_side or ''))
                 if song_idx == self.current_track_idx:
                     if song_idx != songs_to_show[-1]:
                         # Small spacing around current...
                         right_side = (
-                            right_side_items and right_side_items.pop()
+                            right_side_items and right_side_items.pop(0)
                         )
                         res.append(('', right_side or ''))
             while right_side_items:
                 # This can happend f.x. when we have one song...
-                res.append(('', right_side_items.pop()))
+                res.append(('', right_side_items.pop(0)))
         else:
             res.append('No songs found in playlist!')
 
@@ -503,6 +505,22 @@ class Player(object):
         return NOOP
 
     # Song handling
+    def add_play_then_remove(self, item):
+        '''
+        Adds item to the current queue temporary. After the song has been added
+        it will start playing. Once it's finished or navigated from it, it will
+        be removed and the song that was playing when it was added will start
+        playing.
+        temporary_song is the index to the currently temporary song in the
+        song_list, not in song_order
+        '''
+        self.clean_temporary_song()
+        idx_of_new_item = len(self.song_list)
+        self.song_list.append(item)
+        self.song_order.insert(self.current_track_idx, idx_of_new_item)
+        self.temporary_song = idx_of_new_item
+        self.play_current_song(start_playing=True, clean_temporary=False)
+
     def add_to_queue(self, item):
         '''
         Adds item to the end of the current song list. Item can be either
@@ -521,6 +539,23 @@ class Player(object):
                 if track.availability != spotify.TrackAvailability.UNAVAILABLE:
                     self.add_to_queue(track)
         self.playlist = None
+
+    def clean_temporary_song(self):
+        '''
+        If there is a temporary song in the queue, remove it from the song list
+        and make sure that the song playing before it gets selected
+        :returns: None
+        '''
+        if self.temporary_song:
+            temporary_song_index = self.song_order.index(self.temporary_song)
+            self.song_order.remove(self.temporary_song)
+            del self.song_list[self.temporary_song]
+            self.temporary_song = None
+            if temporary_song_index < self.current_track_idx:
+                # If the previous song came before the current (which happens
+                # unless the user selected the previous song) we have to
+                # select the previous song so we don't jump to the next one.
+                self.current_track_idx = self.get_prev_idx()
 
     def check_end_of_track(self):
         '''
@@ -607,13 +642,21 @@ class Player(object):
         '''
         self.end_of_track.set()
         thread.interrupt_main()
+        return False
 
-    def play_current_song(self, start_playing=True):
+    def play_current_song(self, start_playing=True, clean_temporary=True):
         '''
-        Plays the current song
+        Plays the current song.
+        Before playing these actions are performed:
+            1. Removes the temporary song if there is one.
+            2. If the current track's artist is banned, removes the current
+               song.
         :returns: None
         '''
         self.player.unload()
+
+        if clean_temporary:
+            self.clean_temporary_song()
 
         current_track = self.get_track_by_idx(self.current_track_idx)
         if not current_track:

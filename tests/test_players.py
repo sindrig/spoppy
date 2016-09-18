@@ -536,3 +536,28 @@ class TestPlayer(unittest.TestCase):
             71, max_length=None
         )
         self.assertEquals(result, expected_duration)
+
+    def test_clean_temporary_song_does_nothing_when_no_temp_song(self):
+        self.assertIsNone(self.player.clean_temporary_song())
+
+    def test_song_is_removed_if_is_temporary(self):
+        track_should_be_there = [utils.Track('Hey im here', 'duran')]
+        track_2_should_be_there = [utils.Track('Hey im here also', 'duran')]
+        track_should_not_be_there = [utils.Track('Im gone', 'Brynja')]
+        self.player.song_list = [
+            track_should_be_there,
+            track_should_not_be_there,
+            track_2_should_be_there
+        ]
+        self.player.current_track_idx = 1
+        self.player.temporary_song = 1
+        self.player.song_order = [0, 1, 2]
+
+        # We want track_2_should_be_there to be selected after removal
+        self.assertIsNone(self.player.clean_temporary_song())
+        self.assertEquals(len(self.player.song_order), 2)
+        self.assertEquals(len(self.player.song_list), 2)
+        self.assertIn(track_should_be_there, self.player.song_list)
+        self.assertIn(track_2_should_be_there, self.player.song_list)
+        self.assertNotIn(track_should_not_be_there, self.player.song_list)
+        self.assertEquals(self.player.current_track_idx, 1)
