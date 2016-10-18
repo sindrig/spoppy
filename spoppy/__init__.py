@@ -22,8 +22,10 @@ if click:
         from . import logging_utils
         from .navigation import Leifur
         from .config import get_config, set_config, get_config_from_user
+        from .connectivity import check_internet_connection
 
         lock = LockFile('/tmp/spoppy')
+        check_internet_connection()
         try:
             try:
                 # Try for 1s to acquire the lock
