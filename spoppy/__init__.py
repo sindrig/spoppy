@@ -59,6 +59,12 @@ def check_for_updates(lock):
                     click.echo(
                         "You will have to manually update spoppy")
 
+                    # Pause execution so the user sees the error
+                    try:
+                        raw_input()
+                    except NameError:
+                        input()
+
 if click:
     @click.command()
     @click.argument('username', required=False)
