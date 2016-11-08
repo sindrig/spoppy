@@ -13,7 +13,9 @@ You will need a Spotify Premium account and a Spotify username (if you signed up
 
 You will need libspotify, libffi-dev and libasound2-dev installed.
 
-Use your distribution's package manager for libffi-dev and libasound2-dev (f.x. :code:`apt-get install libffi-dev libasound2-dev`).
+You will either need to install :code:`pyaudio` or :code:`alsaaudio` by (running :code:`pip install pyaudio` and :code:`pip install pyalsaaudio`).
+
+Use your distribution's package manager for libffi-dev (f.x. :code:`apt-get install libffi-dev`).
 
 To install libspotify, see `Pyspotify installation <https://pyspotify.mopidy.com/en/latest/installation/#install-from-source>`_. (It's also available in the `AUR <https://aur.archlinux.org/packages/libspotify/>`_).
 
