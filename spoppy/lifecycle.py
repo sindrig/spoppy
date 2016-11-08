@@ -2,15 +2,18 @@ import logging
 import os
 import threading
 
-import click
 import spotify
 from appdirs import user_cache_dir
-from spotipy import Spotify, SpotifyException, oauth2
+from spotipy import Spotify, oauth2
 
 from .dbus_listener import DBusListener
 from .terminal import ResizeChecker
 
 logger = logging.getLogger(__name__)
+
+
+class AudioError(Exception):
+    pass
 
 
 class LifeCycle(object):
@@ -32,17 +35,19 @@ class LifeCycle(object):
             DBusListener(self, self.service_stop_event),
             ResizeChecker(self, self.service_stop_event)
         ]
+
         try:
             import alsaaudio
-            self.alsaaudio = True
-        except ImportError, e:
+            self._sink_klass = spotify.AlsaSink
+        except ImportError:
             try:
                 import pyaudio
-                self.alsaaudio = False # This is a hack, but there is really no better consistent
-                                       # way to check if a package is installed on every version
-                                       # of python
-            except ImportError, e:
-                raise AudioError("Neither AlsaAudio nor PortAudio is installed. Please install either of these!")
+                self._sink_klass = spotify.PortAudioSink
+            except ImportError:
+                raise AudioError(
+                    'Neither AlsaAudio nor PortAudio is installed. '
+                    'Please install either of these!'
+                )
 
     def start_lifecycle_services(self):
         for service in self.services:
@@ -89,10 +94,7 @@ class LifeCycle(object):
         self._pyspotify_session_loop.start()
 
         # Connect an audio sink
-        if self.alsaaudio:
-            spotify.AlsaSink(self._pyspotify_session)
-        else:
-            spotify.PortAudioSink(self._pyspotify_session)
+        self._sink_klass(self._pyspotify_session)
 
         # Events for coordination
         logged_in = threading.Event()
