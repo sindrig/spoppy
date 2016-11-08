@@ -19,12 +19,12 @@ def check_for_updates(click, version, lock):
         click.echo("\033[94m You can install it yourself or "
                    "automatically download it. Automatically "
                    "install it?\033[0m")
+
+        message = '[Y(Automatically) / n(Manually)] '
         try:
-            response = raw_input(
-                '[Y(Automatically) / n(Manually)] ').lower()
+            response = raw_input(message).lower()
         except NameError:
-            response = input(
-                '[Y(Automatically) / n(Manually)] ').lower()
+            response = input(message).lower()
 
         # Only do anything if they say yes
         if response == "y":
