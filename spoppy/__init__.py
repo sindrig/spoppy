@@ -28,9 +28,6 @@ if click:
         lock = LockFile('/tmp/spoppy')
         check_internet_connection()
 
-        # Check for updates
-        check_for_updates(click, get_version(), lock)
-
         try:
             try:
                 # Try for 1s to acquire the lock
@@ -56,6 +53,8 @@ if click:
         except TypeError:
             pass
         else:
+            # Check for updates
+            check_for_updates(click, get_version(), lock)
 
             if username and password:
                 set_config(username, password)
@@ -63,6 +62,7 @@ if click:
                 username, password = get_config()
             if not (username and password):
                 username, password = get_config_from_user()
+
             navigator = None
             try:
                 navigator = Leifur(username, password)
