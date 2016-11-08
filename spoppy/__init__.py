@@ -26,7 +26,6 @@ if click:
         from .update_checker import check_for_updates
 
         lock = LockFile('/tmp/spoppy')
-        check_internet_connection()
 
         try:
             try:
@@ -53,6 +52,7 @@ if click:
         except TypeError:
             pass
         else:
+            check_internet_connection()
             # Check for updates
             check_for_updates(click, get_version(), lock)
 
