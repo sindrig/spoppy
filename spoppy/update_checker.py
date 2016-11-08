@@ -2,6 +2,14 @@ import requests
 import subprocess
 
 
+def pause_for_effect():
+    # Pause execution so the user sees what happened
+    try:
+        raw_input()
+    except NameError:
+        input()
+
+
 def check_for_updates(click, version, lock):
     info = requests.get(
         "https://pypi.python.org/pypi/spoppy/json").json()["info"]
@@ -29,13 +37,15 @@ def check_for_updates(click, version, lock):
         # Only do anything if they say yes
         if response == "y":
             try:
-                subprocess.check_call(
-                    ["sudo", "pip", "install", "spoppy", "--upgrade"])
+                # subprocess.check_call(
+                #     ["sudo", "pip", "install", "spoppy", "--upgrade"])
                 click.echo(
                     "\033[1m\033[92mspoppy updated sucessfully!\033[0m")
 
                 click.echo("Please restart spoppy!")
                 lock.release()
+                pause_for_effect()
+
                 raise SystemExit
 
             except subprocess.CalledProcessError:
@@ -44,9 +54,4 @@ def check_for_updates(click, version, lock):
                     "\033[1m\033[91mAutomatic updating failed!\033[0m")
                 click.echo(
                     "You will have to manually update spoppy")
-
-                # Pause execution so the user sees the error
-                try:
-                    raw_input()
-                except NameError:
-                    input()
+                pause_for_effect()
