@@ -1,6 +1,4 @@
 import logging
-import requests
-import subprocess
 
 try:
     import click
@@ -12,58 +10,8 @@ logger = logging.getLogger('spoppy.main')
 
 
 def get_version():
-    return '1.7.5'
+    return '1.8.0'
 
-
-def check_for_updates(lock):
-    info = requests.get(
-        "https://pypi.python.org/pypi/spoppy/json").json()["info"]
-
-    pypi_version = info["version"].split('.')
-
-    version = get_version().split('.')
-
-    for sub in version:
-        if sub < pypi_version[version.index(sub)]:
-            click.echo("\033[1m\033[94mA new version of spoppy is "
-                       "available!\033[0m")
-            click.echo("\033[1m\033[96m Installed: {} \033[92m"
-                       "PyPi: {}\033[0m".format('.'.join(version),
-                                                '.'.join(pypi_version)))
-            click.echo("\033[94m You can install it yourself or "
-                       "automatically download it. Automatically "
-                       "install it?\033[0m")
-            try:
-                response = raw_input(
-                    '[Y(Automatically) / n(Manually)] ').lower()
-            except NameError:
-                response = input(
-                    '[Y(Automatically) / n(Manually)] ').lower()
-
-            # Only do anything if they say yes
-            if response == "y":
-                try:
-                    subprocess.check_call(
-                        ["sudo", "pip", "install", "spoppy", "--upgrade"])
-                    click.echo(
-                        "\033[1m\033[92mspoppy updated sucessfully!\033[0m")
-
-                    click.echo("Please restart spoppy!")
-                    lock.release()
-                    raise SystemExit
-
-                except subprocess.CalledProcessError:
-                    # Pip failed to automatically update
-                    click.echo(
-                        "\033[1m\033[91mAutomatic updating failed!\033[0m")
-                    click.echo(
-                        "You will have to manually update spoppy")
-
-                    # Pause execution so the user sees the error
-                    try:
-                        raw_input()
-                    except NameError:
-                        input()
 
 if click:
     @click.command()
@@ -75,12 +23,13 @@ if click:
         from .navigation import Leifur
         from .config import get_config, set_config, get_config_from_user
         from .connectivity import check_internet_connection
+        from .update_checker import check_for_updates
 
         lock = LockFile('/tmp/spoppy')
         check_internet_connection()
 
         # Check for updates
-        check_for_updates(lock)
+        check_for_updates(click, get_version(), lock)
 
         try:
             try:
