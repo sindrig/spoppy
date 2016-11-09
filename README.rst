@@ -11,9 +11,9 @@ See requirements.txt for required python packages. They will be automatically in
 
 You will need a Spotify Premium account and a Spotify username (if you signed up via Facebook you can `follow the instructions here <https://community.spotify.com/t5/Help-Accounts-and-Subscriptions/How-do-i-find-my-username-when-using-Facebook-login/td-p/859795>`_ to get your username).
 
-You will need libspotify, libffi-dev and libasound2-dev installed.
+You will need libspotify, pyaudio or pyalsaaudio, and libffi-dev installed.
 
-You will either need to install :code:`pyaudio` or :code:`alsaaudio` by (running :code:`pip install pyaudio` and :code:`pip install pyalsaaudio`).
+You will either need to install :code:`pyaudio` or :code:`alsaaudio` by (pyaudio instructions `Here <https://people.csail.mit.edu/hubert/pyaudio/>`_ and pyalsaaudio instructions `here <http://larsimmisch.github.io/pyalsaaudio/pyalsaaudio.html#installation>`_).
 
 Use your distribution's package manager for libffi-dev (f.x. :code:`apt-get install libffi-dev`).
 
