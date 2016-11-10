@@ -10,6 +10,13 @@ def pause_for_effect():
         input()
 
 
+def parse_version(v):
+    try:
+        return [int(part) for part in v.split('.')]
+    except ValueError:
+        return [0, 0, 0]
+
+
 def check_for_updates(click, version, lock):
     info = requests.get(
         "https://pypi.python.org/pypi/spoppy/json").json()["info"]
@@ -18,7 +25,7 @@ def check_for_updates(click, version, lock):
 
     version = version
 
-    if version < pypi_version:
+    if parse_version(version) < parse_version(pypi_version):
         click.echo("\033[1m\033[94mA new version of spoppy is "
                    "available!\033[0m")
         click.echo("\033[1m\033[96m Installed: {} \033[92m"
