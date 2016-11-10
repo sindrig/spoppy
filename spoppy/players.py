@@ -49,9 +49,9 @@ class Player(object):
             b' ': self.play_pause,
             b'u': UP,
             b'q': self.stop_and_clear,
-            b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,
+            b'd': self.duplicate_current_song,
             b'j': self.backward_10s,
             b'k': self.forward_10s,
             b'?': self.get_help,
@@ -322,13 +322,19 @@ class Player(object):
             self.seconds_played = 0
         self.player.seek(int(self.seconds_played * 1000))
 
-    def debug(self):
+    def duplicate_current_song(self):
         '''
-        Start a debugger to inspect the player's current state
+        Duplicates the current song in the playlist
         :returns: None
         '''
-        import pdb
-        pdb.set_trace()
+        idx_in_song_list = self.song_order[self.current_track_idx]
+        song = self.song_list[idx_in_song_list]
+        self.song_list.insert(idx_in_song_list + 1, song)
+        self.song_order.insert(
+            self.current_track_idx + 1, idx_in_song_list + 1
+        )
+        self.playlist = None
+        return NOOP
 
     def forward_10s(self):
         '''
