@@ -561,3 +561,35 @@ class TestPlayer(unittest.TestCase):
         self.assertIn(track_2_should_be_there, self.player.song_list)
         self.assertNotIn(track_should_not_be_there, self.player.song_list)
         self.assertEquals(self.player.current_track_idx, 1)
+
+    @patch('spoppy.players.Player.play_current_song')
+    def test_duplicate_current_track(self, patched_play_current):
+        track_to_duplicate = utils.Track('foo', ['bar'])
+        song_list = [
+            utils.Track('A', ['A']),
+            utils.Track('B', ['B']),
+            track_to_duplicate,
+            utils.Track('C', ['C']),
+            utils.Track('D', ['D']),
+        ]
+        playlist = utils.Playlist('Playlist 1', song_list)
+
+        self.player.load_playlist(playlist)
+
+        self.assertEqual(len(self.player.song_list), len(song_list))
+        self.assertEqual(len(self.player.song_order), len(song_list))
+        self.assertIsNotNone(self.player.playlist)
+
+        self.player.current_track_idx = song_list.index(track_to_duplicate)
+        current_track_before = self.player.current_track_idx
+
+        self.assertIn(track_to_duplicate, self.player.song_list)
+
+        self.assertEqual(self.player.duplicate_current_song(), responses.NOOP)
+
+        self.assertEquals(len(self.player.song_list), len(song_list) + 1)
+        self.assertEquals(self.player.song_list.count(track_to_duplicate), 2)
+        self.assertEquals(self.player.current_track_idx, current_track_before)
+        patched_play_current.assert_not_called()
+
+        self.assertIsNone(self.player.playlist)
