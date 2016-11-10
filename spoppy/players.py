@@ -49,7 +49,6 @@ class Player(object):
             b' ': self.play_pause,
             b'u': UP,
             b'q': self.stop_and_clear,
-            b'd': self.debug,
             b's': self.toggle_shuffle,
             b'r': self.toggle_repeat,
             b'j': self.backward_10s,
@@ -321,14 +320,6 @@ class Player(object):
         if self.seconds_played < 0:
             self.seconds_played = 0
         self.player.seek(int(self.seconds_played * 1000))
-
-    def debug(self):
-        '''
-        Start a debugger to inspect the player's current state
-        :returns: None
-        '''
-        import pdb
-        pdb.set_trace()
 
     def forward_10s(self):
         '''
