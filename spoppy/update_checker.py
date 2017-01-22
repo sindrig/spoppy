@@ -44,8 +44,10 @@ def check_for_updates(click, version, lock):
         # Only do anything if they say yes
         if response == "y":
             try:
-                subprocess.check_call(
-                    ["sudo", "pip", "install", "spoppy", "--upgrade"])
+                subprocess.check_call([
+                    "sudo", "pip", "install", "spoppy",
+                    "--upgrade", "--no-cache-dir"
+                ])
                 click.echo(
                     "\033[1m\033[92mspoppy updated sucessfully!\033[0m")
 

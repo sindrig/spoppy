@@ -42,7 +42,7 @@ setup(
         'Topic :: Multimedia :: Sound/Audio'
     ],
     keywords='spoppy spotify cli',
-    packages=['spoppy'],
+    packages=['spoppy', 'spoppy.loaders'],
     test_suite='nose.collector',
     install_requires=required,
     include_package_data=True,
