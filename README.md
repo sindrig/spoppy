@@ -7,7 +7,7 @@ Python 2.7 or Python 3.3+
 
 See requirements.txt for required python packages. They will be automatically installed when you install via pip.
 
-You will need a Spotify Premium account and a Spotify username (if you signed up via Facebook you can `follow the instructions here <https://community.spotify.com/t5/Help-Accounts-and-Subscriptions/How-do-i-find-my-username-when-using-Facebook-login/td-p/859795>`_ to get your username).
+You will need a Spotify Premium account and a Spotify username (if you signed up via Facebook you can [follow the instructions here](https://community.spotify.com/t5/Help-Accounts-and-Subscriptions/How-do-i-find-my-username-when-using-Facebook-login/td-p/859795) to get your username).
 
 You will need libspotify, pyaudio or pyalsaaudio, and libffi-dev installed.
 
