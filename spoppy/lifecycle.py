@@ -123,7 +123,7 @@ class LifeCycle(object):
             disconnect_state = spotify.ConnectionState.DISCONNECTED
             if session.connection.state == disconnect_state:
                 if self.player.is_playing():
-                    self.player.play_pause()
+                    self.player.play_pause(user_initiated=False)
                 self.player.state = self.player.DISCONNECTED_INDICATOR
                 logger.warning(
                     'Spoppy has been disconnected. DO YOU HAVE INTERNET?'
@@ -135,7 +135,7 @@ class LifeCycle(object):
                     not self.player.is_playing()
                 ):
                     logger.debug('We got internet back, playing!')
-                    self.player.play_pause()
+                    self.player.play_pause(user_initiated=False)
                 self.player.state = None
 
         def on_lost_play_token(session):

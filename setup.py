@@ -16,7 +16,7 @@ if (3, 0) < sys.version_info < (3, 3) or sys.version_info < (2, 7):
 with open('requirements.txt', 'r') as f:
     required = f.read().splitlines()
 
-with open('README.rst', 'r') as f:
+with open('README.md', 'r') as f:
     long_description = f.read()
 
 setup(

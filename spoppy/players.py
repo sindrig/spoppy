@@ -29,6 +29,7 @@ class Player(object):
     shuffle = False
     repeat = REPEAT_OPTIONS[0]
     original_playlist_name = None
+    user_initiated_pause = True
 
     # Initialization and external helpers
     def __init__(self, navigator):
@@ -396,18 +397,25 @@ class Player(object):
         self.play_current_song()
         return NOOP
 
-    def play_pause(self):
+    def play_pause(self, user_initiated=True):
         '''
         Pauses the current song if it's currently playing, otherwise pauses it.
         :returns: responses.NOOP
         '''
-        if not self.is_playing():
-            self.player.play()
-            self.play_timestamp = time.time()
-        else:
+        if self.is_playing():
             self.player.pause()
             self.seconds_played += time.time() - self.play_timestamp
             self.play_timestamp = None
+            self.user_initiated_pause = user_initiated
+        else:
+            if not self.user_initiated_pause or user_initiated:
+                self.player.play()
+                self.play_timestamp = time.time()
+            else:
+                logger.info(
+                    'Got request to play pause but refusing to do so since '
+                    'user did not request it'
+                )
         return NOOP
 
     def previous_song(self):

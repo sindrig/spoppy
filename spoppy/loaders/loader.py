@@ -1,15 +1,12 @@
 import logging
-import random
 import threading
 
-from spotify.track import Track
-
-from .loaders.search import Search
+from .search import Search
 
 logger = logging.getLogger(__name__)
 
 
-class RadioResults(object):
+class Results(object):
     def __init__(self, results, message=''):
         self.term = None
         self.results = results
@@ -36,21 +33,12 @@ AUTH_ERROR_MESSAGE = (
 )
 
 
-class Recommendations(Search):
-    item_cls = Track
-    search_type = 'tracks'
+class Loader(Search):
 
-    def __init__(self, navigator, seeds, seed_type):
+    def __init__(self, navigator):
         self.navigator = navigator
         self.session = navigator.session
-        self.seed_type = seed_type
 
-        if len(seeds) > 5:
-            seeds = random.sample(seeds, 5)
-        self.seeds = [
-            item.uri if hasattr(item, 'uri') else item.link.uri
-            for item in seeds
-        ]
         self.loaded_event = threading.Event()
 
         super(Search, self).__init__()
@@ -58,16 +46,9 @@ class Recommendations(Search):
         self.start()
 
     def run(self):
-
-        kwargs = {}
-        if self.seed_type == 'artists':
-            kwargs['seed_artists'] = self.seeds
-        else:
-            kwargs['seed_tracks'] = self.seeds
+        logger.debug('Getting playlists for %s' % self.navigator.username)
         try:
-            response_data = self.navigator.spotipy_client.recommendations(
-                **kwargs
-            )
+            response_data = self.get_data()
         except Exception as e:
             if getattr(e, 'http_status', None) == 401:
                 logger.debug(
@@ -84,18 +65,18 @@ class Recommendations(Search):
         else:
             logger.debug('Got these keys: %s', response_data.keys())
 
-            self.handle_results(response_data['tracks'])
+            self.handle_results(response_data['items'])
         finally:
             self.loaded_event.set()
 
     def get_empty_results(self, message=''):
-        return RadioResults([], message)
+        return Results([], message)
 
     def handle_results(self, response_data):
-        logger.debug('Got %d songs', len(response_data))
+        logger.debug('Got %d items', len(response_data))
+
         item_results = self.manipulate_items([
-            self.item_cls(self.session, item['uri'])
+            self.get_item(self.session, item)
             for item in response_data
         ])
-
-        self.results = RadioResults(item_results)
+        self.results = Results(item_results)

@@ -9,7 +9,9 @@ from spotify import TrackAvailability
 from . import responses
 from .http_server import oAuthServerThread
 from .radio import Recommendations
-from .search import search
+from .loaders.playlists import PlaylistLoader
+from .loaders.tracks import TrackLoader
+from .loaders.search import search
 from .util import (format_album, format_track, get_duration_from_s,
                    single_char_with_timeout, sorted_menu_items)
 
@@ -105,8 +107,15 @@ class Menu(object):
     PAGE_DOWN = b'\x1b[6~'
     PAGE = 0
 
+    num_iterations = 0
+    loaded = False
+    loader_enabled = True
+
     def __init__(self, navigator):
         self.navigator = navigator
+
+    def is_loader_enabled(self):
+        return self.loader_enabled and hasattr(self, 'loader')
 
     def get_options(self):
         raise NotImplementedError('Subclass must define this method')
@@ -120,7 +129,31 @@ class Menu(object):
             self._options['p'] = MenuValue('player', responses.PLAYER)
         self.filter = ''
 
+    def handle_results(self):
+        pass
+
     def get_response(self):
+        if self.is_loader_enabled():
+            if not self.loader:
+                if not hasattr(self, 'get_loader'):
+                    raise TypeError('Missing get_loader')
+                self.loader = self.get_loader()
+            if self.loader:
+                self.loader.loaded_event.wait(1)
+                if not self.loader.loaded_event.is_set():
+                    self.num_iterations += 1
+                    return responses.NOOP
+                elif not self.loaded:
+                    self.handle_results()
+                    self.loaded = True
+                    return self
+            else:
+                logger.info(
+                    'No loader set after request, returning noop '
+                    'and re-initializing'
+                )
+                self.initialize()
+                return responses.NOOP
         response = None
         while response is None:
             response = single_char_with_timeout(60)
@@ -156,6 +189,12 @@ class Menu(object):
         return self._options.match_best_or_none(self.filter)
 
     def get_ui(self):
+        if self.is_loader_enabled() and not (
+            self.loader and
+            self.loader.loaded_event.is_set()
+        ):
+            return 'Loading...' + '.' * self.num_iterations
+
         if self.filter:
             items = sorted_menu_items(
                 self._options.filter(self.filter).items()
@@ -192,7 +231,7 @@ class Menu(object):
             else:
                 self.PAGE = 0
 
-        above_menu_items = self.get_header()
+        above_menu_items = self._get_header()
         return (
             (above_menu_items, '') +
             menu_items +
@@ -202,8 +241,28 @@ class Menu(object):
     def get_menu_item(self, key, value):
         return '[%s]: %s' % (key, value)
 
+    def _get_header(self):
+        if self.is_loader_enabled():
+            if (
+                getattr(self, 'loader', None) and
+                getattr(self.loader.results, 'message')
+            ):
+                return self.loader.results.message
+        return self.get_header()
+
     def get_header(self):
         return ''
+
+    def loader_done(self):
+        if self.is_loader_enabled():
+            return hasattr(self, 'loader') and (
+                self.loader and
+                self.loader.loaded_event.is_set()
+            )
+        return True
+
+    def disable_loader(self):
+        self.loader_enabled = False
 
 
 class MainMenu(Menu):
@@ -212,10 +271,25 @@ class MainMenu(Menu):
     def get_options(self):
         res = {
             'vp': MenuValue(
-                'View playlists', PlayListOverview(self.navigator)
+                'View playlists',
+                MyPlaylists(self.navigator)
             ),
-            'st': MenuValue('Search for tracks', TrackSearch(self.navigator)),
-            'sa': MenuValue('Search for albums', AlbumSearch(self.navigator)),
+            'fp': MenuValue(
+                'Featured playlists',
+                FeaturedPlaylists(self.navigator)
+            ),
+            'st': MenuValue(
+                'Search for tracks',
+                TrackSearch(self.navigator)
+            ),
+            'sa': MenuValue(
+                'Search for albums',
+                AlbumSearch(self.navigator)
+            ),
+            'sp': MenuValue(
+                'Search for playlists',
+                PlaylistSearch(self.navigator)
+            ),
             'ss': MenuValue(
                 'Search for artists',
                 ArtistSearch(self.navigator)
@@ -223,44 +297,56 @@ class MainMenu(Menu):
         }
         if not self.navigator.spotipy_client:
             res['li'] = MenuValue(
-                'Log in to spotify web api', LogIntoSpotipy(self.navigator)
+                'Log in to spotify web api',
+                LogIntoSpotipy(self.navigator)
             )
         return res
 
 
 class PlayListOverview(Menu):
 
+    loader = None
+
+    def get_loader(self):
+        raise NotImplementedError('Subclass must implement!')
+
     def get_options(self):
-        def include_playlist(playlist):
-            return (
-                playlist.name and
-                hasattr(playlist, 'link') and
-                any([
-                    track for track in playlist.tracks
-                    if track.availability != TrackAvailability.UNAVAILABLE
-                ])
-            )
+        if not self.loader_done():
+            return {}
+
+        def get_name(x):
+            if x[0].is_loaded:
+                return x[0].name
+            return x[1]['name']
         results = {}
-        playlists = self.navigator.session.playlist_container
-        playlists = enumerate(
-            sorted(
-                (
-                    playlist for playlist in playlists
-                    if include_playlist(playlist)
-                ),
-                key=lambda x: x.name
-            )
+        playlists = sorted(
+            self.loader.results,
+            key=get_name
         )
-        for i, playlist in playlists:
+        for i, (playlist, response) in enumerate(playlists):
             menu_item = PlayListSelected(self.navigator)
-            menu_item.playlist = playlist.link.as_playlist()
+            menu_item.playlist = playlist
+            if playlist.is_loaded:
+                menu_item.disable_loader()
+            menu_item.response = response
             results[str(i + 1).rjust(4)] = MenuValue(
-                menu_item.playlist.name, menu_item
+                get_name((playlist, response)), menu_item
             )
         return results
 
-    def get_header(self):
-        return 'Select a playlist'
+
+class MyPlaylists(PlayListOverview):
+
+    def get_loader(self):
+        return PlaylistLoader(self.navigator)
+
+
+class FeaturedPlaylists(PlayListOverview):
+
+    def get_loader(self):
+        loader = PlaylistLoader(self.navigator)
+        loader.playlist_type = 'featured'
+        return loader
 
 
 class TrackSearchResults(Menu):
@@ -441,6 +527,35 @@ class ArtistSearchResults(TrackSearchResults):
         )
 
 
+class PlaylistSearchResults(TrackSearchResults):
+    search = None
+
+    def select_playlist(self, playlist_idx):
+        def artist_selected():
+            playlist, response = self.search.results.results[playlist_idx]
+            menu_item = PlayListSelected(self.navigator)
+            menu_item.playlist = playlist
+            if playlist.is_loaded:
+                menu_item.disable_loader()
+            menu_item.response = response
+            return menu_item
+        return artist_selected
+
+    def get_options_from_search(self):
+        results = {}
+        for i, (playlist, response) in enumerate(
+            self.search.results.results
+        ):
+            name = '%s (%s)' % (
+                playlist.name or response['name'],
+                response['owner']['id']
+            )
+            results[str(self.get_res_idx(i)).rjust(4)] = MenuValue(
+                name, self.select_playlist(i)
+            )
+        return results
+
+
 class TrackSearch(Menu):
     is_searching = False
     search_pattern = ''
@@ -509,9 +624,32 @@ class ArtistSearch(TrackSearch):
     result_cls = ArtistSearchResults
 
 
+class PlaylistSearch(TrackSearch):
+    search_type = 'playlists'
+    result_cls = PlaylistSearchResults
+
+
 class PlayListSelected(Menu):
     playlist = None
+    response = {
+        'name': ''
+    }
     deleting = False
+    loader = None
+
+    def handle_results(self):
+        self.playlist = MockPlaylist(
+            self.response['name'], self.loader.results
+        )
+
+    def get_loader(self):
+        if isinstance(self.playlist, MockPlaylist):
+            self.disable_loader()
+            return None
+        return TrackLoader(
+            self.navigator,
+            url=self.response['tracks']['href']
+        )
 
     def shuffle_play(self):
         self.navigator.player.load_playlist(
@@ -551,14 +689,16 @@ class PlayListSelected(Menu):
     def get_tracks(self):
         return [
             track for track in
-            self.playlist.tracks
+            (self.loader.results if self.loader else self.playlist.tracks)
             if track.availability != TrackAvailability.UNAVAILABLE
         ]
 
     def get_name(self):
-        return self.playlist.name
+        return self.playlist.name or self.response['name']
 
     def get_options(self):
+        if not self.loader_done():
+            return {}
         results = {}
         if self.deleting:
             results['y'] = MenuValue('Yes', self.do_delete_playlist)
@@ -581,7 +721,7 @@ class PlayListSelected(Menu):
 
         if self.navigator.spotipy_client:
             start_radio = StartRadio(self.navigator)
-            start_radio.seeds = self.playlist.tracks
+            start_radio.seeds = self.get_tracks()
             start_radio.seed_type = 'tracks'
             start_radio.verbose_name = self.get_name()
             results['rt'] = MenuValue(

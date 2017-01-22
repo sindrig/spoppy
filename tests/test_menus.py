@@ -1,11 +1,13 @@
 import unittest
 import uuid
+from collections import namedtuple
 from mock import Mock, patch
 
 from spoppy import menus, responses
 
 from . import utils
 
+MockLoader = namedtuple('Loader', ('results', ))
 
 class TestOptions(unittest.TestCase):
 
@@ -358,6 +360,7 @@ class TestSubMenus(unittest.TestCase):
             utils.Track('Ziggy Stardust', ['David Bowie']),
         ]
         ps.playlist = utils.Playlist('Playlist', tracks)
+        ps.disable_loader()
         return ps
 
     def test_playlist_overview_shows_all_playlists(self):
@@ -371,6 +374,8 @@ class TestSubMenus(unittest.TestCase):
             playlist_container = self.playlists
         self.navigator.session = Session()
         pov = menus.PlayListOverview(self.navigator)
+        pov.disable_loader()
+        pov.loader = MockLoader([item, {}] for item in self.playlists)
         options = menus.Options(pov.get_options())
         self.assertTrue(
             all(
@@ -381,16 +386,15 @@ class TestSubMenus(unittest.TestCase):
         for playlist in self.playlists:
             self.assertIsNotNone(options.match_best_or_none(playlist.name))
 
-    def test_playlist_overview_does_not_show_invalid_playlists(self):
+    def test_playlist_overview_shows_invalid_playlists_as_well(self):
         self.playlists = [
-            # This is the only one that should be shown
+            utils.Playlist('', []),
             utils.Playlist('A', [utils.Track('foo', ['bar'])]),
             utils.Playlist('B', []),
             utils.Playlist(
                 'C', [utils.Track('foo', ['bar'], available=False)]
             ),
             utils.Playlist('D', []),
-            utils.Playlist('', []),
         ]
         del self.playlists[1].link
 
@@ -398,8 +402,10 @@ class TestSubMenus(unittest.TestCase):
             playlist_container = self.playlists
         self.navigator.session = Session()
         pov = menus.PlayListOverview(self.navigator)
+        pov.disable_loader()
+        pov.loader = MockLoader([[item, {}] for item in self.playlists])
         options = menus.Options(pov.get_options())
-        self.assertEqual(len(options), 1)
+        self.assertEqual(len(options), 5)
         self.assertEqual(
             list(options.values())[0].destination.playlist,
             self.playlists[0]
@@ -408,6 +414,7 @@ class TestSubMenus(unittest.TestCase):
     def test_playlist_selected_does_not_fail_on_empty_playlist(self):
         ps = menus.PlayListSelected(self.navigator)
         ps.playlist = utils.Playlist('asdf', [])
+        ps.disable_loader()
         # Only delete and radio available
         self.assertEqual(len(ps.get_options()), 2)
 

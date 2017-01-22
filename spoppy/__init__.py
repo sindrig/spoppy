@@ -10,7 +10,7 @@ logger = logging.getLogger('spoppy.main')
 
 
 def get_version():
-    return '1.10.3'
+    return '2.0.0'
 
 
 if click:
@@ -18,8 +18,8 @@ if click:
     @click.argument('username', required=False)
     @click.argument('password', required=False)
     def main(username, password):
-        # Ignore error, logging set up in logging utils
         from . import logging_utils
+        logging_utils.configure_logging()
         from .navigation import Leifur
         from .config import get_config, set_config, get_config_from_user
         from .connectivity import check_internet_connection
