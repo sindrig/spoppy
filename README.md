@@ -11,9 +11,9 @@ You will need a Spotify Premium account and a Spotify username (if you signed up
 
 You will need libspotify, pyaudio or pyalsaaudio, and libffi-dev installed.
 
-You will either need to install :code:`pyaudio` or :code:`alsaaudio` by (pyaudio instructions [Here](https://people.csail.mit.edu/hubert/pyaudio/) and pyalsaaudio instructions [here](http://larsimmisch.github.io/pyalsaaudio/pyalsaaudio.html#installation)).
+You will either need to install `pyaudio` or `alsaaudio` by (pyaudio instructions [Here](https://people.csail.mit.edu/hubert/pyaudio/) and pyalsaaudio instructions [here](http://larsimmisch.github.io/pyalsaaudio/pyalsaaudio.html#installation)).
 
-Use your distribution's package manager for libffi-dev (f.x. :code:`apt-get install libffi-dev`).
+Use your distribution's package manager for libffi-dev (f.x. `apt-get install libffi-dev`).
 
 To install libspotify, see [Pyspotify installation](https://pyspotify.mopidy.com/en/latest/installation/#install-from-source). (It's also available in the `[AUR](https://aur.archlinux.org/packages/libspotify/).
 
@@ -21,11 +21,11 @@ For DBus integration you'll need python-dbus and python-gobject2. Use your distr
 
 ## Installation
 
-:code:`pip install spoppy`
+`pip install spoppy`
 
 To install globally you will probably need superuser privileges.
 
-After installation run :code:`spoppy` in your terminal and you're all set!
+After installation run `spoppy` in your terminal and you're all set!
 
 ## Screenshots
 
@@ -51,16 +51,16 @@ After installation run :code:`spoppy` in your terminal and you're all set!
 1. Create a virtualenv (python 2.7 or python 3.3+)
 2. Clone this project
 3. Activate your virtualenv
-4. Install requirements (:code:`pip install -r requirements.txt`)
-5. Run :code:`python scripts/spoppy` (you will be asked for username/password)
+4. Install requirements (`pip install -r requirements.txt`)
+5. Run `python scripts/spoppy` (you will be asked for username/password)
 
 ## DBus integration
 
 1. Run `make install_dbus`
 2. Make sure you have python-gobject2 installed
 3. Symlink gi (and possibly glib) to your virtualenv (that is, if you're not installing globally!)
-4. The service will be available at "/com/spoppy" (f.x. :code:`qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
+4. The service will be available at "/com/spoppy" (f.x. `qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
 
 ## Testing
 
-:code:`make test`
+`make test`
