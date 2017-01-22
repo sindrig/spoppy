@@ -11,11 +11,11 @@ You will need a Spotify Premium account and a Spotify username (if you signed up
 
 You will need libspotify, pyaudio or pyalsaaudio, and libffi-dev installed.
 
-You will either need to install :code:`pyaudio` or :code:`alsaaudio` by (pyaudio instructions `Here <https://people.csail.mit.edu/hubert/pyaudio/>`_ and pyalsaaudio instructions `here <http://larsimmisch.github.io/pyalsaaudio/pyalsaaudio.html#installation>`_).
+You will either need to install :code:`pyaudio` or :code:`alsaaudio` by (pyaudio instructions [Here](https://people.csail.mit.edu/hubert/pyaudio/) and pyalsaaudio instructions [here](http://larsimmisch.github.io/pyalsaaudio/pyalsaaudio.html#installation)).
 
 Use your distribution's package manager for libffi-dev (f.x. :code:`apt-get install libffi-dev`).
 
-To install libspotify, see `Pyspotify installation <https://pyspotify.mopidy.com/en/latest/installation/#install-from-source>`_. (It's also available in the `AUR <https://aur.archlinux.org/packages/libspotify/>`_).
+To install libspotify, see [Pyspotify installation](https://pyspotify.mopidy.com/en/latest/installation/#install-from-source). (It's also available in the `[AUR](https://aur.archlinux.org/packages/libspotify/).
 
 For DBus integration you'll need python-dbus and python-gobject2. Use your distribution's package manager. Spoppy will work without these packages but won't expose it's DBus procedures.
 
