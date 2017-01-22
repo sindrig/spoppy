@@ -10,6 +10,7 @@ import requests
 from spotify.track import Track, TrackAvailability
 from spotify.album import Album
 from spotify.artist import Artist
+from spotify.playlist import Playlist
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,10 @@ class Search(threading.Thread):
         'artists': (
             u'/v1/search?query={query}&offset=0&limit=20&type=artist',
             Artist
+        ),
+        'playlists': (
+            u'/v1/search?query={query}&offset=0&limit=20&type=playlist',
+            Playlist
         ),
     }
     BASE_URL = 'https://api.spotify.com'
@@ -90,7 +95,7 @@ class Search(threading.Thread):
 
     def handle_results(self, response_data):
         item_results = self.manipulate_items([
-            self.item_cls(self.session, item['uri'])
+            (self.item_cls(self.session, item['uri']), item)
             for item in response_data['items']
         ])
 
@@ -108,15 +113,17 @@ class Search(threading.Thread):
             # Not my fault....
             # See: https://github.com/mopidy/pyspotify/issues/119
             return [
-                item.browse().load() for item in items
+                item[0].browse().load() for item in items
             ]
         elif self.search_type == 'tracks':
             return [
-                item.load() for item in items
+                item[0].load() for item in items
                 if item.availability != TrackAvailability.UNAVAILABLE
             ]
         elif self.search_type == 'artists':
             return [
-                item.browse().load() for item in items
+                item[0].browse().load() for item in items
             ]
+        elif self.search_type == 'playlists':
+            return items
         raise TypeError('Unknown search type %s' % self.search_type)
