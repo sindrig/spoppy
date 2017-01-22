@@ -109,6 +109,10 @@ class Search(threading.Thread):
         )
 
     def manipulate_items(self, items):
+        items = [
+            item if isinstance(item, tuple) else (item, {})
+            for item in items
+        ]
         if self.search_type == 'albums':
             # Not my fault....
             # See: https://github.com/mopidy/pyspotify/issues/119
@@ -118,7 +122,7 @@ class Search(threading.Thread):
         elif self.search_type == 'tracks':
             return [
                 item[0].load() for item in items
-                if item.availability != TrackAvailability.UNAVAILABLE
+                if item[0].availability != TrackAvailability.UNAVAILABLE
             ]
         elif self.search_type == 'artists':
             return [
