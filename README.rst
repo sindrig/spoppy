@@ -30,6 +30,17 @@ To install globally you will probably need superuser privileges.
 
 After installation run :code:`spoppy` in your terminal and you're all set!
 
+Screenshots
+=============
+![Top menu](/screenshots/top_menu.png?raw=true "Top menu")
+![Playlist overview](/screenshots/playlist_overview.png?raw=true "Playlist overview")
+![Playlist](/screenshots/playlist.png?raw=true "Playlist")
+![Player](/screenshots/player.png?raw=true "Player")
+![Player operations](/screenshots/player_operations.png?raw=true "Player operations")
+![Search results](/screenshots/search_results.png?raw=true "Search results")
+![Banned artists](/screenshots/banned_artists.png?raw=true "Banned artists")
+![Song info](/screenshots/song_info.png?raw=true "Song info")
+
 Development
 =============
 
