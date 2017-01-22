@@ -23,3 +23,6 @@ class Playlist(object):
         self.link.as_playlist.return_value = self
         self.name = name
         self.tracks = tracks
+
+    def is_loaded(self):
+        return True
