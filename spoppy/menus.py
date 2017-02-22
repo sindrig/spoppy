@@ -139,7 +139,7 @@ class Menu(object):
                     raise TypeError('Missing get_loader')
                 self.loader = self.get_loader()
             if self.loader:
-                self.loader.loaded_event.wait(1)
+                self.loader.loaded_event.wait(111)
                 if not self.loader.loaded_event.is_set():
                     self.num_iterations += 1
                     return responses.NOOP
@@ -278,6 +278,10 @@ class MainMenu(Menu):
                 'Featured playlists',
                 FeaturedPlaylists(self.navigator)
             ),
+            'pp': MenuValue(
+                'Problematic playlists',
+                ProblematicPlaylists(self.navigator)
+            ),
             'st': MenuValue(
                 'Search for tracks',
                 TrackSearch(self.navigator)
@@ -346,6 +350,14 @@ class FeaturedPlaylists(PlayListOverview):
     def get_loader(self):
         loader = PlaylistLoader(self.navigator)
         loader.playlist_type = 'featured'
+        return loader
+
+
+class ProblematicPlaylists(PlayListOverview):
+
+    def get_loader(self):
+        loader = PlaylistLoader(self.navigator)
+        loader.playlist_type = 'problematic'
         return loader
 
 
