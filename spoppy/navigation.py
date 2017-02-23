@@ -10,6 +10,7 @@ from .config import clear_config
 from .util import (
     ban_artist, unban_artist, get_banned_artist_uris, get_artist_uri
 )
+from .spotipy_wrapper import SpotipyWrapper
 
 try:
     # py2.7+
@@ -30,13 +31,20 @@ class Leifur(object):
         self.session = None
 
         self.lifecycle.check_spotipy_logged_in()
-        self.spotipy_client = self.lifecycle.get_spotipy_client()
+        self.spotipy_client = SpotipyWrapper(
+            self,
+            self.lifecycle.refresh_and_get_spotipy_client()
+        )
 
         self.navigating = True
         logger.debug('Leifur initialized')
 
     def refresh_spotipy_client(self):
-        self.spotipy_client = self.lifecycle.get_spotipy_client()
+        self.spotipy_client = self.lifecycle.refresh_and_get_spotipy_client()
+
+    def refresh_spotipy_client_and_token(self):
+        self.lifecycle.check_spotipy_logged_in()
+        self.refresh_spotipy_client()
 
     def start(self):
         if self.lifecycle.check_pyspotify_logged_in():

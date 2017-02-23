@@ -26,7 +26,6 @@ class LifeCycle(object):
         self.player = player
         self.username = username
         self.password = password
-        self._spotipy_client = None
         self._spotipy_token = None
         self._pyspotify_session = None
         self._pyspotify_session_loop = None
@@ -35,6 +34,8 @@ class LifeCycle(object):
             DBusListener(self, self.service_stop_event),
             ResizeChecker(self, self.service_stop_event)
         ]
+
+        self._spotipy_client = Spotify()
 
         try:
             import alsaaudio
@@ -189,11 +190,11 @@ class LifeCycle(object):
         if token_info:
             self.set_spotipy_token(token_info)
 
-    def get_spotipy_client(self):
+    def refresh_and_get_spotipy_client(self):
         if self._spotipy_token:
-            if not self._spotipy_client:
-                self._spotipy_client = Spotify(auth=self._spotipy_token)
-            return self._spotipy_client
+            # Loads of access to "private" stuff...
+            self._spotipy_client._auth = self._spotipy_token
+        return self._spotipy_client
 
     def set_spotipy_token(self, token):
         self._spotipy_token = token['access_token']
