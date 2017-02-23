@@ -20,6 +20,9 @@ from .menus import SavePlaylist, SongSelectedWhilePlaying
 
 logger = logging.getLogger(__name__)
 
+# How many seconds we consider "previous song" to not mean restart song
+SECONDS_TO_RESTART_SONG = 5
+
 
 class Player(object):
 
@@ -144,6 +147,14 @@ class Player(object):
             )
         return res
 
+    def get_played_seconds(self):
+        seconds_played = self.seconds_played
+        if self.play_timestamp is not None:
+            # We are actually playing and we have to calculate the number of
+            # seconds since we last pressed play
+            seconds_played += time.time() - self.play_timestamp
+        return seconds_played
+
     def get_progress(self):
         '''
         Get the progress of the currently playing song
@@ -152,11 +163,7 @@ class Player(object):
                                  percent_played,
                                  current_track_duration)
         '''
-        seconds_played = self.seconds_played
-        if self.play_timestamp is not None:
-            # We are actually playing and we have to calculate the number of
-            # seconds since we last pressed play
-            seconds_played += time.time() - self.play_timestamp
+        seconds_played = self.get_played_seconds()
 
         # pyspotify's duration is in ms
         percent_played = (seconds_played * 1000) / float(
@@ -423,8 +430,12 @@ class Player(object):
         Plays the previous song in the song list
         :returns: responses.NOOP
         '''
-        self.current_track_idx = self.get_prev_idx()
-        self.play_current_song()
+        if self.get_played_seconds() < SECONDS_TO_RESTART_SONG:
+            self.current_track_idx = self.get_prev_idx()
+            self.play_current_song()
+        else:
+            # Restart current song
+            self.play_current_song(clean_temporary=False)
         return NOOP
 
     def remove_current_song(self):
