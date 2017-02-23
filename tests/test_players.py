@@ -156,11 +156,27 @@ class TestPlayer(unittest.TestCase):
     @patch('spoppy.players.Player.get_prev_idx')
     def test_play_prev_song(self, patched_get_prev_idx, patched_play_current):
         patched_get_prev_idx.return_value = 7
-
         self.assertEqual(self.player.previous_song(), responses.NOOP)
 
         self.assertEqual(self.player.current_track_idx, 7)
         patched_play_current.assert_called_once_with()
+
+    @patch('spoppy.players.Player.get_played_seconds')
+    @patch('spoppy.players.Player.play_current_song')
+    @patch('spoppy.players.Player.get_prev_idx')
+    def test_prev_restarts_after_some_time(
+        self,
+        patched_get_prev_idx,
+        patched_play_current,
+        patched_get_played_seconds
+    ):
+        patched_get_played_seconds.return_value = 6
+        patched_get_prev_idx.return_value = 7
+        self.player.current_track_idx = 1
+        self.assertEqual(self.player.previous_song(), responses.NOOP)
+
+        self.assertEqual(self.player.current_track_idx, 1)
+        patched_play_current.assert_called_once_with(clean_temporary=False)
 
     @patch('spoppy.players.Player.play_current_song')
     @patch('spoppy.players.Player.get_next_idx')
