@@ -838,7 +838,7 @@ class SongSelectedWhilePlaying(BanArtistMixin, Menu):
             self.playlist
         )
         self.navigator.player.play_track(
-            self.playlist.tracks.index(self.track)
+            self.playlist.tracks.results.index(self.track)
         )
         return self.navigator.player
 
