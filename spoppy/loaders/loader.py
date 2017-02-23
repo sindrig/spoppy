@@ -25,11 +25,12 @@ class Results(object):
 
 AUTH_ERROR_MESSAGE = (
     'While accessing spotify, we encountered a 401 access denied error, '
-    'probably due to your access token being expired. At this moment, this can'
-    ' only be fixed by restarting spoppy. If that doesn\'t work, try removing '
-    'the file ~/.cache/spoppy/spotipy_token.cache, restart spoppy and log in '
-    'to spotify web API again. For more information on this issue, see '
-    'https://github.com/sindrig/spoppy/issues/127'
+    'probably due to your access token being expired. I\'ve attempted to '
+    'automatically refresh you access, so you can retry this operation. '
+    'If that didn\'t work, try restarting spoppy, and if that doesn\'t work '
+    'try removing the file ~/.cache/spoppy/spotipy_token.cache, restart '
+    'spoppy and log in to spotify web API again. For more information on this '
+    'issue, see https://github.com/sindrig/spoppy/issues/127'
 )
 
 
