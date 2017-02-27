@@ -837,8 +837,11 @@ class SongSelectedWhilePlaying(BanArtistMixin, Menu):
         self.navigator.player.load_playlist(
             self.playlist
         )
+        tracks = self.playlist.tracks
+        if hasattr(tracks, 'results'):
+            tracks = tracks.results
         self.navigator.player.play_track(
-            self.playlist.tracks.results.index(self.track)
+            tracks.index(self.track)
         )
         return self.navigator.player
 
