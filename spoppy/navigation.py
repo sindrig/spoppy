@@ -40,7 +40,10 @@ class Leifur(object):
         logger.debug('Leifur initialized')
 
     def refresh_spotipy_client(self):
-        self.spotipy_client = self.lifecycle.refresh_and_get_spotipy_client()
+        self.spotipy_client = SpotipyWrapper(
+            self,
+            self.lifecycle.refresh_and_get_spotipy_client()
+        )
 
     def refresh_spotipy_client_and_token(self):
         self.lifecycle.check_spotipy_logged_in()

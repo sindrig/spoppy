@@ -1,6 +1,7 @@
 import logging
 import threading
 
+from appdirs import user_cache_dir
 from .search import Search
 
 logger = logging.getLogger(__name__)
@@ -28,10 +29,10 @@ AUTH_ERROR_MESSAGE = (
     'probably due to your access token being expired. I\'ve attempted to '
     'automatically refresh you access, so you can retry this operation. '
     'If that didn\'t work, try restarting spoppy, and if that doesn\'t work '
-    'try removing the file ~/.cache/spoppy/spotipy_token.cache, restart '
+    'try removing the file %s/spotipy_token.cache, restart '
     'spoppy and log in to spotify web API again. For more information on this '
     'issue, see https://github.com/sindrig/spoppy/issues/127'
-)
+) % (user_cache_dir(appname='spoppy'), )
 
 
 class Loader(Search):

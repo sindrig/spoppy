@@ -270,14 +270,6 @@ class MainMenu(Menu):
 
     def get_options(self):
         res = {
-            'vp': MenuValue(
-                'View playlists',
-                MyPlaylists(self.navigator)
-            ),
-            'fp': MenuValue(
-                'Featured playlists',
-                FeaturedPlaylists(self.navigator)
-            ),
             'st': MenuValue(
                 'Search for tracks',
                 TrackSearch(self.navigator)
@@ -295,10 +287,19 @@ class MainMenu(Menu):
                 ArtistSearch(self.navigator)
             ),
         }
-        if not self.navigator.spotipy_client:
+        if not self.navigator.spotipy_client.is_authenticated():
             res['li'] = MenuValue(
                 'Log in to spotify web api',
                 LogIntoSpotipy(self.navigator)
+            )
+        else:
+            res['vp'] = MenuValue(
+                'View playlists',
+                MyPlaylists(self.navigator)
+            )
+            res['fp'] = MenuValue(
+                'Featured playlists',
+                FeaturedPlaylists(self.navigator)
             )
         return res
 
@@ -1089,7 +1090,7 @@ class LogIntoSpotipy(Menu):
         else:
             res = [
                 (
-                    'Opening an authorization page in your browser, please'
+                    'Opening an authorization page in your browser, please '
                     'follow the instructions there to finalize the '
                     'authorization process'
                 )

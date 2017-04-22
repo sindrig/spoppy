@@ -8,6 +8,9 @@ class SpotipyWrapper(object):
         self.client = client
         self.navigator = navigator
 
+    def is_authenticated(self):
+        return bool(self.client._auth)
+
     def __getattr__(self, func_name):
         def wrapped(*args, **kwargs):
             try:
