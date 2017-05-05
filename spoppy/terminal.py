@@ -16,7 +16,8 @@ else:
     TerminalDimensions = namedtuple('TerminalDimensions', ('columns', 'lines'))
 
     def get_terminal_dimensions(fallback):
-        rows, cols = os.popen('stty size', 'r').read().split()
+        rows = os.getenv('LINES')
+        cols = os.getenv('COLUMNS')
         return TerminalDimensions(int(cols), int(rows))
 
 

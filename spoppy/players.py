@@ -665,6 +665,7 @@ class Player(object):
         :param session: A `spotify.Session` (optional, not used)
         :returns: None
         '''
+        logger.debug('END_OF_TRACK event fired')
         self.end_of_track.set()
         thread.interrupt_main()
         return False
@@ -707,6 +708,10 @@ class Player(object):
         self.seconds_played = 0
 
         logger.debug('Playing track %s' % self.current_track.name)
+
+        self.session.off(
+            spotify.SessionEvent.END_OF_TRACK
+        )
 
         # Register event listeners
         self.session.on(
