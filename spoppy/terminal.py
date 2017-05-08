@@ -18,6 +18,12 @@ else:
     def get_terminal_dimensions(fallback):
         rows = os.getenv('LINES')
         cols = os.getenv('COLUMNS')
+        if not rows or not cols:
+            stty = os.popen('stty size', 'r').read().split()
+            if stty and len(stty) == 2:
+                rows, cols = stty
+            else:
+                cols, rows = fallback
         return TerminalDimensions(int(cols), int(rows))
 
 
