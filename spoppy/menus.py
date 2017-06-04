@@ -269,39 +269,40 @@ class MainMenu(Menu):
     INCLUDE_UP_ITEM = False
 
     def get_options(self):
-        res = {
-            'st': MenuValue(
-                'Search for tracks',
-                TrackSearch(self.navigator)
-            ),
-            'sa': MenuValue(
-                'Search for albums',
-                AlbumSearch(self.navigator)
-            ),
-            'sp': MenuValue(
-                'Search for playlists',
-                PlaylistSearch(self.navigator)
-            ),
-            'ss': MenuValue(
-                'Search for artists',
-                ArtistSearch(self.navigator)
-            ),
-        }
-        if not self.navigator.spotipy_client.is_authenticated():
-            res['li'] = MenuValue(
-                'Log in to spotify web api',
-                LogIntoSpotipy(self.navigator)
-            )
+        if self.navigator.spotipy_client.is_authenticated():
+            return {
+                'st': MenuValue(
+                    'Search for tracks',
+                    TrackSearch(self.navigator)
+                ),
+                'sa': MenuValue(
+                    'Search for albums',
+                    AlbumSearch(self.navigator)
+                ),
+                'sp': MenuValue(
+                    'Search for playlists',
+                    PlaylistSearch(self.navigator)
+                ),
+                'ss': MenuValue(
+                    'Search for artists',
+                    ArtistSearch(self.navigator)
+                ),
+                'vp': MenuValue(
+                    'View playlists',
+                    MyPlaylists(self.navigator)
+                ),
+                'fp': MenuValue(
+                    'Featured playlists',
+                    FeaturedPlaylists(self.navigator)
+                ),
+            }
         else:
-            res['vp'] = MenuValue(
-                'View playlists',
-                MyPlaylists(self.navigator)
-            )
-            res['fp'] = MenuValue(
-                'Featured playlists',
-                FeaturedPlaylists(self.navigator)
-            )
-        return res
+            return {
+                'li': MenuValue(
+                    'Log in to spotify web api',
+                    LogIntoSpotipy(self.navigator)
+                )
+            }
 
 
 class PlayListOverview(Menu):
