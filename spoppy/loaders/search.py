@@ -20,8 +20,9 @@ def search(*args, **kwargs):
 
 
 class SearchResults(object):
-    def __init__(self, term, results, offset, total,
+    def __init__(self, response, term, results, offset, total,
                  previous_page=None, next_page=None):
+        self.response = response
         self.term = term
         self.results = results
         self.total = total
@@ -34,41 +35,42 @@ class Search(threading.Thread):
     ENDPOINTS = {
         # Each entry is a tuple, (HTTP_ENDPOINT, CLS)
         'tracks': (
-            u'/v1/search?query={query}&offset=0&limit=20&type=track',
+            'track',
             Track
         ),
         'albums': (
-            u'/v1/search?query={query}&offset=0&limit=20&type=album',
+            'album',
             Album
         ),
         'artists': (
-            u'/v1/search?query={query}&offset=0&limit=20&type=artist',
+            'artist',
             Artist
         ),
         'playlists': (
-            u'/v1/search?query={query}&offset=0&limit=20&type=playlist',
+            'playlist',
             Playlist
         ),
     }
     BASE_URL = 'https://api.spotify.com'
 
-    def __init__(self, session, query='', callback=None,
+    def __init__(self, navigator, query='', callback=None,
                  track_offset=0, track_count=20,
                  album_offset=0, album_count=20,
                  artist_offset=0, artist_count=20,
                  playlist_offset=0, playlist_count=20,
                  search_type=None,
-                 sp_search=None, add_ref=True, direct_endpoint=None):
-        self.session = session
+                 sp_search=None, add_ref=True, next_from=None, prev_from=None):
+        self.navigator = navigator
         self.query = query
         self.search_type = search_type
+
+        # next from and prev from are SearchResult items
+        self.next_from = next_from and next_from.response
+        self.prev_from = prev_from and prev_from.response
+
         self.loaded_event = threading.Event()
 
-        endpoint, self.item_cls = self.ENDPOINTS[self.search_type]
-
-        self.endpoint = direct_endpoint or (
-            self.BASE_URL + endpoint.format(query=self.query)
-        )
+        self.type, self.item_cls = self.ENDPOINTS[self.search_type]
 
         self.results = self.get_empty_results()
 
@@ -78,10 +80,20 @@ class Search(threading.Thread):
 
     def run(self):
         try:
-            logger.debug('Getting %s' % self.endpoint)
-            r = requests.get(self.endpoint)
-            r.raise_for_status()
-            response_data = r.json()[self.search_type]
+            logger.debug('Getting %s: %s', self.type, self.query)
+            if self.next_from:
+                results = self.navigator.spotipy_client.next(
+                    self.next_from
+                )
+            elif self.prev_from:
+                results = self.navigator.spotipy_client.previous(
+                    self.prev_from
+                )
+            else:
+                results = self.navigator.spotipy_client.search(
+                    self.query, limit=20, type=self.type
+                )
+            response_data = results[self.search_type]
             self.results = self.handle_results(response_data)
         except requests.exceptions.RequestException:
             logger.exception('RequestException')
@@ -91,15 +103,16 @@ class Search(threading.Thread):
             self.loaded_event.set()
 
     def get_empty_results(self):
-        return SearchResults(self.query, [], 0, 0)
+        return SearchResults(None, self.query, [], 0, 0)
 
     def handle_results(self, response_data):
         item_results = self.manipulate_items([
-            (self.item_cls(self.session, item['uri']), item)
+            (self.item_cls(self.navigator.session, item['uri']), item)
             for item in response_data['items']
         ])
 
         return SearchResults(
+            response_data,
             self.query,
             item_results,
             response_data['offset'],
