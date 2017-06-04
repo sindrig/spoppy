@@ -61,6 +61,10 @@ After installation run `spoppy` in your terminal and you're all set!
 3. Symlink gi (and possibly glib) to your virtualenv (that is, if you're not installing globally!)
 4. The service will be available at "/com/spoppy" (f.x. `qdbus com.spoppy /com/spoppy com.spoppy.PlayPause`)
 
+## Debugging
+
+To enable verbose logging, set the `SPOPPY_LOG_LEVEL` environment variable to `'DEBUG'`.
+
 ## Testing
 
 `make test`

@@ -373,11 +373,6 @@ class TrackSearchResults(Menu):
         return super(TrackSearchResults, self).get_response()
 
     def go_to(self, up_down):
-        if up_down > 0:
-            destination = 'next_page'
-        else:
-            destination = 'previous_page'
-
         def inner():
             self.paginating = True
 
@@ -387,15 +382,17 @@ class TrackSearchResults(Menu):
                 self.search = self.get_cache()[new_cache_idx]
                 logger.debug('Got search from cache, yahoo!')
             except IndexError:
-                direct_endpoint = getattr(
-                    self.search.results, destination
-                )
                 logger.debug('Initiating new search')
-                self.search = search(
-                    self.navigator.session, self.search.query,
+                kwargs = dict(
+                    navigator=self.navigator,
+                    query=self.search.query,
                     search_type=self.search.search_type,
-                    direct_endpoint=direct_endpoint
                 )
+                if up_down > 0:
+                    kwargs['next_from'] = self.search.results
+                else:
+                    kwargs['prev_from'] = self.search.results
+                self.search = search(**kwargs)
                 self.update_cache()
             return self
         return inner
@@ -571,7 +568,7 @@ class TrackSearch(Menu):
     def get_search_results(self):
         self.search_pattern = self.filter
         self.search = search(
-            self.navigator.session, self.search_pattern,
+            self.navigator, self.search_pattern,
             search_type=self.search_type
         )
         self.is_searching = True
@@ -718,7 +715,11 @@ class PlayListSelected(Menu):
                     )
             else:
                 logger.debug('There are no songs in this playlist!')
-            results['x'] = MenuValue('Delete playlist', self.delete_playlist)
+            if self.playlist in self.navigator.session.playlist_container:
+                results['x'] = MenuValue(
+                    'Delete playlist',
+                    self.delete_playlist
+                )
 
         if self.navigator.spotipy_client:
             start_radio = StartRadio(self.navigator)
