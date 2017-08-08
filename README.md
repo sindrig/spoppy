@@ -1,5 +1,6 @@
 # spoppy
 Lightweight Spotify Command-Line interface for Linux
+[![Build Status](https://travis-ci.org/sindrig/spoppy.svg?branch=master)](https://travis-ci.org/sindrig/spoppy)
 
 ## Requirements
 
