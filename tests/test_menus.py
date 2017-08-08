@@ -407,6 +407,10 @@ class TestSubMenus(unittest.TestCase):
         pov.loader = MockLoader([[item, {}] for item in self.playlists])
         options = menus.Options(pov.get_options())
         self.assertEqual(len(options), 5)
+        print([
+            t.destination.playlist
+            for t in list(options.values())
+        ])
         self.assertEqual(
             list(options.values())[0].destination.playlist,
             self.playlists[0]
