@@ -5,3 +5,5 @@ install:
   - sudo apt-get update
   - sudo apt-get install libffi-dev libasound2-dev python-spotify --allow-unauthenticated
   - sudo pip install pyalsaaudio
+script:
+  - python setup.py test
