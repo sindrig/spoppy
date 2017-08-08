@@ -1,5 +1,8 @@
 language: python
+before_install:
+  - sudo wget -q -O /etc/apt/sources.list.d/mopidy.list https://apt.mopidy.com/jessie.list
 install:
+  - sudo apt-get update
   - sudo apt-get install libffi-dev libasound2-dev libspotify-dev
   - sudo pip install pyalsaaudio
 script:
