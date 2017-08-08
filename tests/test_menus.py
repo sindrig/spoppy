@@ -350,6 +350,7 @@ class TestSubMenus(unittest.TestCase):
 
     def setUp(self):
         self.navigator = Mock()
+        self.navigator.session.playlist_container = []
 
     def get_playlist_selected(self):
         ps = menus.PlayListSelected(self.navigator)
@@ -415,6 +416,7 @@ class TestSubMenus(unittest.TestCase):
         ps = menus.PlayListSelected(self.navigator)
         ps.playlist = utils.Playlist('asdf', [])
         ps.disable_loader()
+        self.navigator.session.playlist_container = [ps.playlist]
         # Only delete and radio available
         self.assertEqual(len(ps.get_options()), 2)
 
