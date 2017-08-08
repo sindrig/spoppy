@@ -1,1 +1,3 @@
 language: python
+install:
+  - apt-get install libspotify-deb
