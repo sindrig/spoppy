@@ -354,6 +354,7 @@ class FeaturedPlaylists(PlayListOverview):
 class TrackSearchResults(Menu):
     search = None
     paginating = False
+    support_shuffle_page = True
     _cached_search_results = []
 
     def set_initial_results(self, search):
@@ -448,7 +449,7 @@ class TrackSearchResults(Menu):
             results['n'] = MenuValue(
                 'Next page', self.go_to(1)
             )
-        if len(self.search.results.results):
+        if self.support_shuffle_page and len(self.search.results.results):
             results['sp'] = MenuValue(
                 'Shuffle play current page', self.shuffle_play
             )
@@ -528,6 +529,7 @@ class ArtistSearchResults(TrackSearchResults):
 
 class PlaylistSearchResults(TrackSearchResults):
     search = None
+    support_shuffle_page = False
 
     def select_playlist(self, playlist_idx):
         def artist_selected():
