@@ -26,6 +26,7 @@ class Leifur(object):
     def __init__(self, username, password):
         self.username = username
         self.password = password
+        self.spotipy_me = None
         self.player = Player(self)
         self.lifecycle = LifeCycle(username, password, self.player)
         self.session = None
@@ -81,6 +82,7 @@ class Leifur(object):
         self.session.process_events()
         going.initialize()
         while self.navigating:
+            self.check_spotipy_me()
             click.clear()
             self.print_header()
             self.print_menu(going.get_ui())
@@ -109,7 +111,7 @@ class Leifur(object):
 
     def print_header(self):
         click.echo('Spoppy v. %s' % get_version())
-        click.echo('Hi there %s' % self.username)
+        click.echo('Hi there %s' % self.get_displayname())
         click.echo('')
 
     def print_menu(self, menu):
@@ -176,3 +178,17 @@ class Leifur(object):
         self.banned_artists.remove(uri)
         logger.info('{}'.format(self.banned_artists))
         return unban_artist(uri)
+
+    def check_spotipy_me(self):
+        if not self.spotipy_me and self.spotipy_client.is_authenticated():
+            self.spotipy_me = self.spotipy_client.me()
+
+    def get_displayname(self):
+        if self.spotipy_me:
+            dp_name = self.spotipy_me['display_name'] or self.spotipy_me['id']
+            if dp_name != self.username:
+                return '%s (%s)' % (
+                    dp_name,
+                    self.username
+                )
+        return self.username

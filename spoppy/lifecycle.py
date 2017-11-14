@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 import threading
 
@@ -10,6 +11,22 @@ from .dbus_listener import DBusListener
 from .terminal import ResizeChecker
 
 logger = logging.getLogger(__name__)
+
+
+SPOFITY_WEB_API_SCOPE = ' '.join([
+    'playlist-read-private',
+    'playlist-read-collaborative',
+    'playlist-modify-public',
+    'playlist-modify-private',
+    'user-follow-modify',
+    'user-follow-read',
+    'user-library-read',
+    'user-library-modify',
+    'user-top-read',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+])
 
 
 class AudioError(Exception):
@@ -38,11 +55,11 @@ class LifeCycle(object):
         self._spotipy_client = Spotify()
 
         try:
-            import alsaaudio
+            import alsaaudio  # noqa
             self._sink_klass = spotify.AlsaSink
         except ImportError:
             try:
-                import pyaudio
+                import pyaudio  # noqa
                 self._sink_klass = spotify.PortAudioSink
             except ImportError:
                 raise AudioError(
@@ -177,9 +194,26 @@ class LifeCycle(object):
         cache_location = os.path.join(
             self.user_cache_dir, 'spotipy_token.cache'
         )
+        try:
+            # Clean up tokens pre 2.2.1
+            # TODO remove soon
+            with open(cache_location, 'r') as f:
+                contents = f.read()
+            data = json.loads(contents)
+            if 'scope' in data and data['scope'] is None:
+                del data['scope']
+                with open(cache_location, 'w') as f:
+                    f.write(json.dumps(data))
+        except IOError:
+            pass
+        except ValueError:
+            logger.warning(
+                'ValueError while getting token info',
+                exc_info=True
+            )
         return oauth2.SpotifyOAuth(
             client_id, client_secret, redirect_uri,
-            scope=None,
+            scope=SPOFITY_WEB_API_SCOPE,
             cache_path=cache_location
         )
 

@@ -62,13 +62,13 @@ class Player(object):
             b'x': self.remove_current_song,
             b'w': self.save_as_playlist,
             b'i': self.show_song_info,
-            b'\x1b[A': self.move_song_up,
-            b'\x1b[B': self.move_song_down,
+            b'\x1b[a': self.move_song_up,
+            b'\x1b[b': self.move_song_down,
         }
         key_names = {
             b' ': 'space',
-            b'\x1b[A': 'up arrow',
-            b'\x1b[B': 'down arrow',
+            b'\x1b[a': 'up arrow',
+            b'\x1b[b': 'down arrow',
         }
         self.reversed_actions = defaultdict(list)
         for key, value in self.actions.items():
@@ -196,10 +196,11 @@ class Player(object):
                 self.navigator.update_progress(*self.get_progress())
             char = single_char_with_timeout(timeout=1.5)
             if char:
-                logger.debug('Got some char: %s' % char)
+                logger.debug('Got some char: %s', char)
                 char = char.lower()
             response = self.actions.get(char, NOOP)
             if response != NOOP:
+                logger.debug('Response %s', response)
                 if callable(response):
                     evaluated_response = response()
                     if evaluated_response:
