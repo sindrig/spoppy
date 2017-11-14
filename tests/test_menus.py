@@ -676,30 +676,112 @@ class TestPlaylistSaver(unittest.TestCase):
         self.assertEqual(menu.get_response(), 'foobar')
         patched_get_response.assert_called_once_with()
 
-    def test_saves_playlist(self):
-        playlist_mock = Mock()
-        (
-            self.navigator.session.playlist_container
-            .add_new_playlist.return_value
-        ) = playlist_mock
-        playlist_mock.has_pending_changes = False
+    @patch('spoppy.menus.Playlist')
+    def test_saves_playlist(self, patched_playlist):
+        class MockSong(object):
+            class Link(object):
+                pass
+
+            def __init__(self, id):
+                self.link = MockSong.Link()
+                self.link.uri = id
+
+        patched_playlist.return_value = Mock()
+
+        spotipy = self.navigator.spotipy_client
+        spotipy.current_user_playlists = Mock()
+        spotipy.current_user_playlists.return_value = {
+            'items': [],
+        }
+        spotipy.user_playlist_create = Mock()
+        spotipy.user_playlist_create.return_value = {
+            'id': 'some-id',
+            'uri': 'some-uri',
+        }
+        spotipy.user_playlist_add_tracks = Mock()
+
+        self.navigator.spotipy_me = {
+            'id': 'sindrig',
+        }
 
         menu = menus.SavePlaylist(self.navigator)
         menu.is_saving = True
         menu.new_playlist_name = 'foobar'
-        menu.song_list = [1, 2, 3]
+        menu.song_list = [MockSong(1), MockSong(2), MockSong(3)]
         menu.callback = Mock()
 
         self.assertEqual(menu.get_response(), responses.UP)
 
-        (
-            menu.navigator.session.playlist_container.add_new_playlist
-        ).assert_called_once_with(menu.new_playlist_name)
+        spotipy.user_playlist_create.assert_called_once_with(
+            user='sindrig',
+            name='foobar',
+        )
+        spotipy.user_playlist_add_tracks.assert_called_once_with(
+            user='sindrig',
+            playlist_id='some-id',
+            tracks=[1, 2, 3]
+        )
 
-        playlist_mock.add_tracks.assert_called_once_with(menu.song_list)
-        playlist_mock.load.assert_called_once_with()
+        menu.callback.assert_called_once_with(patched_playlist.return_value)
 
-        menu.callback.assert_called_once_with(playlist_mock)
+        patched_playlist.assert_called_once_with(
+            self.navigator.session,
+            'some-uri',
+        )
+        patched_playlist.return_value.load.assert_called_once_with()
+
+    @patch('spoppy.menus.Playlist')
+    def test_edits_playlist(self, patched_playlist):
+        class MockSong(object):
+            class Link(object):
+                pass
+
+            def __init__(self, id):
+                self.link = MockSong.Link()
+                self.link.uri = id
+
+        patched_playlist.return_value = Mock()
+
+        spotipy = self.navigator.spotipy_client
+        spotipy.current_user_playlists = Mock()
+        spotipy.current_user_playlists.return_value = {
+            'items': [{
+                'id': 'some-id',
+                'name': 'foobar',
+                'uri': 'some-uri',
+            }],
+        }
+        spotipy.user_playlist_create = Mock()
+        spotipy.user_playlist_add_tracks = Mock()
+        spotipy.user_playlist_replace_tracks = Mock()
+
+        self.navigator.spotipy_me = {
+            'id': 'sindrig',
+        }
+
+        menu = menus.SavePlaylist(self.navigator)
+        menu.is_saving = True
+        menu.new_playlist_name = 'foobar'
+        menu.song_list = [MockSong(1), MockSong(2), MockSong(3)]
+        menu.callback = Mock()
+
+        self.assertEqual(menu.get_response(), responses.UP)
+
+        spotipy.user_playlist_create.assert_not_called()
+        spotipy.user_playlist_add_tracks.assert_not_called()
+        spotipy.user_playlist_replace_tracks.assert_called_once_with(
+            user='sindrig',
+            playlist_id='some-id',
+            tracks=[1, 2, 3]
+        )
+
+        menu.callback.assert_called_once_with(patched_playlist.return_value)
+
+        patched_playlist.assert_called_once_with(
+            self.navigator.session,
+            'some-uri',
+        )
+        patched_playlist.return_value.load.assert_called_once_with()
 
     @patch('spoppy.menus.threading')
     @patch('spoppy.menus.webbrowser')
