@@ -9,6 +9,7 @@ from spotipy import Spotify, oauth2
 
 from .dbus_listener import DBusListener
 from .terminal import ResizeChecker
+from .sink import get_wrapped_alsa_sink
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,7 @@ class LifeCycle(object):
         self._spotipy_client = Spotify()
 
         try:
-            import alsaaudio  # noqa
-            self._sink_klass = spotify.AlsaSink
+            self._sink_klass = get_wrapped_alsa_sink()
         except ImportError:
             try:
                 import pyaudio  # noqa
