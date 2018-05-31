@@ -14,7 +14,7 @@ def configure_logging():
 
     LOG_LEVEL = getattr(
         logging,
-        os.getenv('SPOPPY_LOG_LEVEL', ''),
+        os.getenv('SPOPPY_LOG_LEVEL', '').upper(),
         logging.INFO
     )
 
@@ -34,4 +34,10 @@ def configure_logging():
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.debug('Logger set up')
+    logger.debug('Spoppy logger set up')
+
+    requests_log = logging.getLogger('urllib3')
+    requests_log.setLevel(LOG_LEVEL)
+    requests_log.propagate = True
+    requests_log.addHandler(handler)
+    logger.debug('urllib3 logger set up')

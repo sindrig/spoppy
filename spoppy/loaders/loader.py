@@ -34,6 +34,14 @@ AUTH_ERROR_MESSAGE = (
     'issue, see https://github.com/sindrig/spoppy/issues/127'
 ) % (user_cache_dir(appname='spoppy'), )
 
+RECEIVED_NONE_MESSAGE = (
+    'While fetching data from spotify, we got no results, which is kind of '
+    'very strange. Please create an issue on https://github.com/sindrig/spoppy'
+    ' and include the log file "%s/spoppy.log".' % (
+        user_cache_dir(appname='spoppy')
+    )
+)
+
 
 class Loader(Search):
 
@@ -65,9 +73,14 @@ class Loader(Search):
                 )
                 self.results = self.get_empty_results()
         else:
-            logger.debug('Got these keys: %s', response_data.keys())
+            if response_data:
+                logger.debug('Got these keys: %s', response_data.keys())
 
-            self.handle_results(response_data['items'])
+                self.handle_results(response_data['items'])
+            else:
+                self.results = self.get_empty_results(
+                    message=RECEIVED_NONE_MESSAGE
+                )
         finally:
             self.loaded_event.set()
 

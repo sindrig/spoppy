@@ -54,6 +54,8 @@ class LifeCycle(object):
         ]
 
         self._spotipy_client = Spotify()
+        # self._spotipy_client.trace = True
+        # self._spotipy_client.trace_out = True
 
         try:
             self._sink_klass = get_wrapped_alsa_sink()
