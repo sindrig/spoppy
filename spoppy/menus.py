@@ -329,8 +329,10 @@ class PlayListOverview(Menu):
         for i, (playlist, response) in enumerate(playlists):
             menu_item = PlayListSelected(self.navigator)
             menu_item.playlist = playlist
-            if playlist.is_loaded:
-                menu_item.disable_loader()
+            # Hmm... This seems to break for some people. Just fetch from
+            # rest api forever and ever
+            # if playlist.is_loaded:
+            #     menu_item.disable_loader()
             menu_item.response = response
             results[str(i + 1).rjust(4)] = MenuValue(
                 get_name((playlist, response)), menu_item
