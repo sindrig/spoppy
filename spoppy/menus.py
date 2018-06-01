@@ -319,8 +319,8 @@ class PlayListOverview(Menu):
 
         def get_name(x):
             if x[0].is_loaded:
-                return x[0].name
-            return x[1]['name']
+                return x[0].name or ''
+            return x[1]['name'] or ''
         results = {}
         playlists = sorted(
             self.loader.results,
