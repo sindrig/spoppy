@@ -16,7 +16,7 @@ You will either need to install `pyaudio` or `alsaaudio` by (pyaudio instruction
 
 Use your distribution's package manager for libffi-dev (f.x. `apt-get install libffi-dev`).
 
-To install libspotify, see [Pyspotify installation](https://pyspotify.mopidy.com/en/latest/installation/#install-from-source). (It's also available in the [AUR](https://aur.archlinux.org/packages/libspotify/)).
+To install libspotify, see [Pyspotify installation](https://pyspotify.mopidy.com/en/latest/installation/#install-from-source). (Archives are available at [libspotify-archive](https://mopidy.github.io/libspotify-archive/)), thanks to the great guys at [Mopidy](https://www.mopidy.com/)!.
 
 For DBus integration you'll need python-dbus and python-gobject2. Use your distribution's package manager. Spoppy will work without these packages but won't expose it's DBus procedures.
 
