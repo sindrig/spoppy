@@ -14,8 +14,11 @@ coverage: clean
 build: clean
 	python setup.py sdist bdist_wheel
 
-upload: build
+check:
+	twine check dist/*
+
+upload: build check
 	twine upload dist/*
 
-test_upload: build
+test_upload: build check
 	twine upload --repository-url https://test.pypi.org/legacy/ dist/*

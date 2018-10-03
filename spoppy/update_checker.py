@@ -1,4 +1,5 @@
 import os
+import sys
 
 import requests
 import subprocess
@@ -46,13 +47,17 @@ def check_for_updates(click, version, lock):
         # Only do anything if they say yes
         if response == "y":
             try:
-                for possibility in os.environ['PATH'].split(':'):
+                for possibility in sys.path:
                     pip_executable = os.path.join(possibility, 'pip')
                     if os.path.isfile(pip_executable):
-                        subprocess.check_call([
-                            pip_executable, "install", "spoppy",
-                            "--upgrade", "--no-cache-dir"
-                        ])
+                        popen_args = [
+                            pip_executable,
+                            "install",
+                            "spoppy",
+                            "--upgrade",
+                            "--no-cache-dir",
+                        ]
+                        subprocess.check_call(popen_args, env=os.environ)
                         click.echo(
                             "\033[1m\033[92mspoppy updated sucessfully!\033[0m")
 
