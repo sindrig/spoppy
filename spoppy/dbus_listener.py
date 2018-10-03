@@ -65,7 +65,7 @@ if dbus:
 
         @dbus.service.method(
             "com.spoppy",
-            in_signature='', out_signature='b'
+            in_signature='', out_signature='s'
         )
         def PlayPause(self):
             self.lifecycle.player.play_pause()
