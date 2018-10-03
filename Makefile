@@ -11,8 +11,11 @@ test: clean
 coverage: clean
 	nosetests -s --with-coverage --cover-package=spoppy --cover-html --cover-html-dir=htmlcov
 
-upload:
-	python setup.py sdist upload -r pypi
+build: clean
+	python setup.py sdist bdist_wheel
 
-test_upload:
-	python setup.py sdist upload -r pypitest
+upload: build
+	twine upload dist/*
+
+test_upload: build
+	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
