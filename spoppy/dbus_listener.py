@@ -69,7 +69,9 @@ if dbus:
         )
         def PlayPause(self):
             self.lifecycle.player.play_pause()
-            return True
+            if self.lifecycle.player.is_playing():
+                return 'Playing'
+            return 'Paused'
 
         @dbus.service.method(
             "com.spoppy",
