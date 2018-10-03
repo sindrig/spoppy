@@ -1,3 +1,5 @@
+import os
+
 import requests
 import subprocess
 
@@ -44,18 +46,22 @@ def check_for_updates(click, version, lock):
         # Only do anything if they say yes
         if response == "y":
             try:
-                subprocess.check_call([
-                    "sudo", "pip", "install", "spoppy",
-                    "--upgrade", "--no-cache-dir"
-                ])
-                click.echo(
-                    "\033[1m\033[92mspoppy updated sucessfully!\033[0m")
+                for possibility in os.environ['PATH'].split(':'):
+                    pip_executable = os.path.join(possibility, 'pip')
+                    if os.path.isfile(pip_executable):
+                        subprocess.check_call([
+                            pip_executable, "install", "spoppy",
+                            "--upgrade", "--no-cache-dir"
+                        ])
+                        click.echo(
+                            "\033[1m\033[92mspoppy updated sucessfully!\033[0m")
 
-                click.echo("Please restart spoppy!")
-                lock.release()
-                pause_for_effect()
-
-                raise SystemExit
+                        click.echo("Please restart spoppy!")
+                        lock.release()
+                        pause_for_effect()
+                        raise SystemExit()
+                else:
+                    raise OSError('No pip executable found on path')
 
             except subprocess.CalledProcessError:
                 # Pip failed to automatically update
