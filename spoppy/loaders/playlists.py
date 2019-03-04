@@ -1,12 +1,19 @@
 import logging
-from collections import namedtuple
-
-from spotify.playlist import Playlist
 
 from .loader import Loader
 
 logger = logging.getLogger(__name__)
-MockPlaylist = namedtuple('Playlist', ('name', 'tracks'))
+
+
+class Playlist(object):
+    def __init__(self, item):
+        self.item = item
+        self.name = '%s by %s' % (
+            item['name'],
+            item['owner']['display_name'],
+        )
+        self.tracks = item['tracks']
+        self.is_loaded = True
 
 
 class PlaylistLoader(Loader):
@@ -25,4 +32,4 @@ class PlaylistLoader(Loader):
             raise ValueError('Unknown playlist type %s' % self.playlist_type)
 
     def get_item(self, session, item):
-        return Playlist(session, item['uri']), item
+        return Playlist(item), item

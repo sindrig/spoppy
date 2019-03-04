@@ -60,7 +60,8 @@ class Player(object):
             b'k': self.forward_10s,
             b'?': self.get_help,
             b'x': self.remove_current_song,
-            b'w': self.save_as_playlist,
+            # TODO: Use web api!
+            # b'w': self.save_as_playlist,
             b'i': self.show_song_info,
             b'\x1b[a': self.move_song_up,
             b'\x1b[b': self.move_song_down,

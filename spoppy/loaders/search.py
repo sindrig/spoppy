@@ -125,6 +125,7 @@ class Search(threading.Thread):
         items = [
             item if isinstance(item, tuple) else (item, {})
             for item in items
+            if item
         ]
         if self.search_type == 'albums':
             # Not my fault....
